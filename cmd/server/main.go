@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/afumu/ground-link/internal/security"
 	"github.com/afumu/ground-link/internal/server"
@@ -11,7 +12,11 @@ import (
 )
 
 func main() {
-	dir := flag.String("dir", ".", "工作目录")
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
+	dir := flag.String("dir", cwd, "工作目录")
 	port := flag.Int("port", 8080, "端口")
 	timeout := flag.Int("timeout", 60, "超时(秒)")
 	flag.Parse()
