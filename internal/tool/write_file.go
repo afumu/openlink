@@ -5,8 +5,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/afumu/ground-link/internal/security"
-	"github.com/afumu/ground-link/internal/types"
+	"github.com/afumu/openlink/internal/security"
+	"github.com/afumu/openlink/internal/types"
 )
 
 type WriteFileTool struct {

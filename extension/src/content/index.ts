@@ -1,13 +1,14 @@
-if (!(window as any).__GROUND_LINK_LOADED__) {
-  (window as any).__GROUND_LINK_LOADED__ = true;
+if (!(window as any).__OPENLINK_LOADED__) {
+  (window as any).__OPENLINK_LOADED__ = true;
 
   const script = document.createElement('script');
   script.src = chrome.runtime.getURL('injected.js');
   (document.head || document.documentElement).appendChild(script);
 
-  window.addEventListener('message', async (event) => {
+  let execQueue = Promise.resolve();
+  window.addEventListener('message', (event) => {
     if (event.data.type === 'TOOL_CALL') {
-      executeToolCall(event.data.data);
+      execQueue = execQueue.then(() => executeToolCall(event.data.data));
     }
   });
 
@@ -26,15 +27,18 @@ function injectInitButton() {
   document.body.appendChild(btn);
 }
 
+async function bgFetch(url: string, options?: any): Promise<{ ok: boolean; status: number; body: string }> {
+  return chrome.runtime.sendMessage({ type: 'FETCH', url, options });
+}
+
 async function sendInitPrompt() {
   const { authToken, apiUrl } = await chrome.storage.local.get(['authToken', 'apiUrl']);
   if (!apiUrl) { alert('请先在插件中配置 API 地址'); return; }
   const headers: any = { 'Content-Type': 'application/json' };
   if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
-  const resp = await fetch(`${apiUrl}/prompt`, { headers });
+  const resp = await bgFetch(`${apiUrl}/prompt`, { headers });
   if (!resp.ok) { alert('获取初始化提示词失败'); return; }
-  const text = await resp.text();
-  fillAndSend(text, true);
+  fillAndSend(resp.body, true);
 }
 
 async function executeToolCall(toolCall: any) {
@@ -50,7 +54,7 @@ async function executeToolCall(toolCall: any) {
       return;
     }
 
-    const response = await fetch(`${apiUrl}/exec`, {
+    const response = await bgFetch(`${apiUrl}/exec`, {
       method: 'POST',
       headers,
       body: JSON.stringify(toolCall)
@@ -60,11 +64,15 @@ async function executeToolCall(toolCall: any) {
       fillAndSend('认证失败，请在插件中重新输入 Token', false);
       return;
     }
+    if (!response.ok) {
+      fillAndSend(`[OpenLink 错误] HTTP ${response.status}`, false);
+      return;
+    }
 
-    const result = await response.json();
+    const result = JSON.parse(response.body);
     fillAndSend(result.output, true);
   } catch (error) {
-    console.error('[Ground-Link] 执行失败:', error);
+    fillAndSend(`[OpenLink 错误] ${error}`, false);
   }
 }
 
@@ -78,14 +86,16 @@ function fillAndSend(result: string, autoSend = false) {
   editor.dispatchEvent(new ClipboardEvent('paste', {clipboardData: dataTransfer, bubbles: true, cancelable: true}));
 
   if (autoSend) {
-    const checkAndClick = () => {
+    const checkAndClick = (attempts = 0) => {
+      if (attempts > 50) return;
+      // Selectors target Qwen/Tongyi chat UI — update if app is rebuilt with new hashes
       const sendBtn = document.querySelector('.operateBtn-JsB9e2') as HTMLElement;
       if (sendBtn && !sendBtn.classList.contains('disabled-ZaDDJC')) {
         sendBtn.click();
       } else {
-        setTimeout(checkAndClick, 100);
+        setTimeout(() => checkAndClick(attempts + 1), 100);
       }
     };
-    setTimeout(checkAndClick, 300);
+    setTimeout(() => checkAndClick(), 300);
   }
 }

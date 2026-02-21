@@ -3,7 +3,7 @@ package tool
 import (
 	"time"
 
-	"github.com/afumu/ground-link/internal/types"
+	"github.com/afumu/openlink/internal/types"
 )
 
 type Tool interface {

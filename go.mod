@@ -1,4 +1,4 @@
-module github.com/afumu/ground-link
+module github.com/afumu/openlink
 
 go 1.23.0
 

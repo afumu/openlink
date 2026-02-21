@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/afumu/ground-link/internal/types"
+	"github.com/afumu/openlink/internal/types"
 	"github.com/gin-gonic/gin"
 )
 
@@ -20,7 +20,7 @@ func LoadOrCreateToken() (string, error) {
 		return "", err
 	}
 
-	dir := filepath.Join(home, ".ground")
+	dir := filepath.Join(home, ".openlink")
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return "", err
 	}

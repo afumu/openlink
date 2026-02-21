@@ -1,12 +1,15 @@
 package tool
 
 import (
+	"bufio"
 	"errors"
+	"fmt"
 	"os"
+	"strings"
 	"time"
 
-	"github.com/afumu/ground-link/internal/security"
-	"github.com/afumu/ground-link/internal/types"
+	"github.com/afumu/openlink/internal/security"
+	"github.com/afumu/openlink/internal/types"
 )
 
 type ReadFileTool struct {
@@ -27,7 +30,9 @@ func (t *ReadFileTool) Description() string {
 
 func (t *ReadFileTool) Parameters() interface{} {
 	return map[string]string{
-		"path": "string (required) - file path to read",
+		"path":   "string (required) - file path to read",
+		"offset": "number (optional) - start line number, 1-based (default: 1)",
+		"limit":  "number (optional) - max lines to read (default: 2000)",
 	}
 }
 
@@ -43,6 +48,18 @@ func (t *ReadFileTool) Execute(ctx *Context) *Result {
 	result := &Result{StartTime: time.Now()}
 	path, _ := ctx.Args["path"].(string)
 
+	offset := 1
+	limit := MaxLines
+	if v, ok := ctx.Args["offset"].(float64); ok && v >= 1 {
+		offset = int(v)
+	}
+	if v, ok := ctx.Args["limit"].(float64); ok && v >= 1 {
+		limit = int(v)
+		if limit > MaxLines {
+			limit = MaxLines
+		}
+	}
+
 	safePath, err := security.SafePath(ctx.Config.RootDir, path)
 	if err != nil {
 		result.Status = "error"
@@ -50,18 +67,62 @@ func (t *ReadFileTool) Execute(ctx *Context) *Result {
 		return result
 	}
 
-	content, err := os.ReadFile(safePath)
+	f, err := os.Open(safePath)
 	if err != nil {
 		result.Status = "error"
 		result.Error = err.Error()
 		return result
 	}
+	defer f.Close()
+
+	var lines []string
+	totalLines := 0
+	byteCount := 0
+	truncated := false
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		totalLines++
+		if totalLines < offset {
+			continue
+		}
+		if len(lines) >= limit {
+			truncated = true
+			// count remaining lines
+			for scanner.Scan() {
+				totalLines++
+			}
+			break
+		}
+		line := scanner.Text()
+		byteCount += len(line) + 1
+		if byteCount > MaxBytes {
+			truncated = true
+			for scanner.Scan() {
+				totalLines++
+			}
+			break
+		}
+		lines = append(lines, line)
+	}
+
+	if err := scanner.Err(); err != nil {
+		result.Status = "error"
+		result.Error = err.Error()
+		return result
+	}
+
+	output := strings.Join(lines, "\n")
+	if output == "" {
+		output = "empty"
+	}
+	if truncated {
+		nextOffset := offset + len(lines)
+		output += fmt.Sprintf("\n[truncated, %d total lines, use offset=%d to continue]", totalLines, nextOffset)
+	}
 
 	result.Status = "success"
-	result.Output = string(content)
-	if result.Output == "" {
-		result.Output = "empty"
-	}
+	result.Output = output
 	result.EndTime = time.Now()
 	return result
 }

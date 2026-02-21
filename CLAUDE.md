@@ -26,10 +26,10 @@ go run cmd/server/main.go -dir=/path/to/workspace -port=8080 -timeout=60
 
 ```bash
 # Build server binary
-go build -o ground-link cmd/server/main.go
+go build -o openlink cmd/server/main.go
 
 # Run built binary
-./ground-link -dir=/your/workspace -port=8080
+./openlink -dir=/your/workspace -port=8080
 ```
 
 ### Testing the Server

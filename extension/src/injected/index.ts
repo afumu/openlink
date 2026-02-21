@@ -1,23 +1,24 @@
 (function() {
-  console.log('[Ground-Link] 插件已加载');
+  console.log('[OpenLink] 插件已加载');
   const originalFetch = window.fetch;
   let buffer = '';
-  const processedTools = new Set<string>();
 
   window.fetch = function(...args) {
+    const processedTools = new Set<string>();
+    const decoder = new TextDecoder();
     return originalFetch.apply(this, args).then(async response => {
       const reader = response.body!.getReader();
       const stream = new ReadableStream({
         async start(controller) {
           while (true) {
             const {done, value} = await reader.read();
-            if (done) break;
+            if (done) { buffer = ''; break; }
 
-            const text = new TextDecoder().decode(value);
+            const text = decoder.decode(value, { stream: true });
             buffer += text;
 
-            const match = buffer.match(/<tool>([\s\S]*?)<\/tool(?:_call)?>/);
-            if (match) {
+            let match;
+            while ((match = buffer.match(/<tool>([\s\S]*?)<\/tool(?:_call)?>/))) {
               const raw = match[1].trim();
               if (!processedTools.has(raw)) {
                 processedTools.add(raw);

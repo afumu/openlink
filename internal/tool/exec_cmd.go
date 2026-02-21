@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
+	"runtime"
 	"time"
 
-	"github.com/afumu/ground-link/internal/security"
-	"github.com/afumu/ground-link/internal/types"
+	"github.com/afumu/openlink/internal/security"
+	"github.com/afumu/openlink/internal/types"
 )
 
 type ExecCmdTool struct {
@@ -47,6 +49,17 @@ func (t *ExecCmdTool) Validate(args map[string]interface{}) error {
 	return nil
 }
 
+func getShell() (string, string) {
+	if runtime.GOOS == "windows" {
+		comspec := os.Getenv("COMSPEC")
+		if comspec == "" {
+			comspec = "cmd.exe"
+		}
+		return comspec, "/C"
+	}
+	return "sh", "-c"
+}
+
 func (t *ExecCmdTool) Execute(ctx *Context) *Result {
 	result := &Result{StartTime: time.Now()}
 
@@ -61,7 +74,8 @@ func (t *ExecCmdTool) Execute(ctx *Context) *Result {
 	)
 	defer cancel()
 
-	proc := exec.CommandContext(execCtx, "sh", "-c", cmd)
+	shell, flag := getShell()
+	proc := exec.CommandContext(execCtx, shell, flag, cmd)
 	proc.Dir = t.config.RootDir
 	output, err := proc.CombinedOutput()
 	result.EndTime = time.Now()
@@ -72,18 +86,19 @@ func (t *ExecCmdTool) Execute(ctx *Context) *Result {
 		return result
 	}
 
+	outputStr, _ := Truncate(string(output))
+
 	if err != nil {
 		result.Status = "error"
 		result.Error = err.Error()
-		result.Output = string(output)
+		result.Output = outputStr
 		return result
 	}
 
 	result.Status = "success"
-	outputStr := string(output)
 	if outputStr == "" {
 		outputStr = "empty"
 	}
-	result.Output = fmt.Sprintf("命令: %s\n\n%s", cmd, outputStr)
+	result.Output = fmt.Sprintf("command: %s\n\n%s", cmd, outputStr)
 	return result
 }

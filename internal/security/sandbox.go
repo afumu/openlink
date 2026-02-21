@@ -11,12 +11,15 @@ func SafePath(rootDir, targetPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	absTarget, err := filepath.Abs(filepath.Join(rootDir, targetPath))
+	joined := filepath.Join(rootDir, targetPath)
+	// EvalSymlinks 解析符号链接；文件不存在时（新建场景）fallback 到 Abs
+	absTarget, err := filepath.EvalSymlinks(joined)
 	if err != nil {
-		return "", err
+		absTarget, err = filepath.Abs(joined)
+		if err != nil {
+			return "", err
+		}
 	}
-
 	if !strings.HasPrefix(absTarget, absRoot+string(filepath.Separator)) && absTarget != absRoot {
 		return "", errors.New("path outside sandbox")
 	}
@@ -30,10 +33,9 @@ var DangerousCommands = []string{
 }
 
 func IsDangerousCommand(cmd string) bool {
-	cmd = strings.ToLower(strings.ReplaceAll(cmd, " ", ""))
+	lower := strings.ToLower(cmd)
 	for _, dangerous := range DangerousCommands {
-		check := strings.ReplaceAll(dangerous, " ", "")
-		if strings.Contains(cmd, check) {
+		if strings.Contains(lower, dangerous) {
 			return true
 		}
 	}

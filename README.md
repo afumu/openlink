@@ -7,7 +7,7 @@
 ### 1. 启动 Go Server
 
 ```bash
-cd ground-link
+cd openlink
 go run cmd/server/main.go -dir=/your/workspace -port=8080
 ```
 

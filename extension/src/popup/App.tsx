@@ -68,7 +68,7 @@ export default function App() {
 
   return (
     <>
-      <h3>🤖 Ground Link</h3>
+      <h3>🤖 OpenLink</h3>
       <div className="status">
         <div className={`dot ${status === 'connected' ? 'connected' : 'disconnected'}`} />
         <span>{status === 'checking' ? '检查中...' : status === 'connected' ? '已连接' : '未连接'}</span>

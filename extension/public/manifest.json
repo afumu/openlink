@@ -1,8 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "Ground Link",
+  "name": "OpenLink",
   "version": "1.0.0",
-  "description": "浏览器本地代理 - 让 AI 访问本地文件",
+  "description": "OpenLink 代理 - 连接 AI 与本地环境",
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
   "permissions": ["activeTab", "storage"],
   "host_permissions": ["http://127.0.0.1:*/*"],
   "action": {

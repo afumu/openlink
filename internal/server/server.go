@@ -9,9 +9,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/afumu/ground-link/internal/executor"
-	"github.com/afumu/ground-link/internal/security"
-	"github.com/afumu/ground-link/internal/types"
+	"github.com/afumu/openlink/internal/executor"
+	"github.com/afumu/openlink/internal/security"
+	"github.com/afumu/openlink/internal/types"
 	"github.com/gin-gonic/gin"
 )
 
@@ -102,11 +102,11 @@ func (s *Server) handleListTools(c *gin.Context) {
 }
 
 func (s *Server) handleExec(c *gin.Context) {
-	log.Println("[Ground-Link] 收到 /exec 请求")
+	log.Println("[OpenLink] 收到 /exec 请求")
 
 	var req types.ToolRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Printf("[Ground-Link] ❌ JSON 解析失败: %v\n", err)
+		log.Printf("[OpenLink] ❌ JSON 解析失败: %v\n", err)
 		c.JSON(http.StatusBadRequest, types.ToolResponse{
 			Status: "error",
 			Error:  err.Error(),
@@ -114,17 +114,17 @@ func (s *Server) handleExec(c *gin.Context) {
 		return
 	}
 
-	log.Printf("[Ground-Link] 工具调用: name=%s, args=%+v\n", req.Name, req.Args)
+	log.Printf("[OpenLink] 工具调用: name=%s, args=%+v\n", req.Name, req.Args)
 
 	resp := s.executor.Execute(context.Background(), &req)
 
-	log.Printf("[Ground-Link] 执行结果: status=%s, output长度=%d\n", resp.Status, len(resp.Output))
+	log.Printf("[OpenLink] 执行结果: status=%s, output长度=%d\n", resp.Status, len(resp.Output))
 	if resp.Error != "" {
-		log.Printf("[Ground-Link] 错误信息: %s\n", resp.Error)
+		log.Printf("[OpenLink] 错误信息: %s\n", resp.Error)
 	}
 
 	c.JSON(http.StatusOK, resp)
-	log.Println("[Ground-Link] 响应已发送")
+	log.Println("[OpenLink] 响应已发送")
 }
 
 func (s *Server) Run() error {

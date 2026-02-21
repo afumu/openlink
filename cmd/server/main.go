@@ -6,9 +6,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/afumu/ground-link/internal/security"
-	"github.com/afumu/ground-link/internal/server"
-	"github.com/afumu/ground-link/internal/types"
+	"github.com/afumu/openlink/internal/security"
+	"github.com/afumu/openlink/internal/server"
+	"github.com/afumu/openlink/internal/types"
 )
 
 func main() {
@@ -33,7 +33,7 @@ func main() {
 		Token:   token,
 	}
 
-	log.Printf("启动 ground-link server...")
+	log.Printf("启动 openlink server...")
 	log.Printf("工作目录: %s", config.RootDir)
 	log.Printf("端口: %d", config.Port)
 	fmt.Printf("\n认证 URL: http://127.0.0.1:%d/auth?token=%s\n", *port, token)

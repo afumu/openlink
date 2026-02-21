@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
-	"github.com/afumu/ground-link/internal/tool"
-	"github.com/afumu/ground-link/internal/types"
+	"github.com/afumu/openlink/internal/tool"
+	"github.com/afumu/openlink/internal/types"
 )
 
 type Executor struct {
@@ -23,6 +24,13 @@ func New(config *types.Config) *Executor {
 	e.registry.Register(tool.NewListDirTool(config))
 	e.registry.Register(tool.NewReadFileTool(config))
 	e.registry.Register(tool.NewWriteFileTool(config))
+	e.registry.Register(tool.NewGlobTool(config))
+	e.registry.Register(tool.NewGrepTool(config))
+	e.registry.Register(tool.NewEditTool(config))
+	e.registry.Register(tool.NewWebFetchTool())
+	e.registry.Register(tool.NewQuestionTool())
+	e.registry.Register(tool.NewSkillTool(config))
+	e.registry.Register(tool.NewTodoWriteTool(config))
 	return e
 }
 
@@ -31,9 +39,18 @@ func (e *Executor) Execute(ctx context.Context, req *types.ToolRequest) *types.T
 
 	t, exists := e.registry.Get(req.Name)
 	if !exists {
+		t, exists = e.registry.Get(strings.ToLower(req.Name))
+	}
+	if !exists {
+		invalid := &tool.InvalidTool{}
+		args := req.Args
+		if args == nil {
+			args = map[string]interface{}{}
+		}
+		args["tool"] = req.Name
 		return &types.ToolResponse{
 			Status: "error",
-			Error:  fmt.Sprintf("unknown tool: %s", req.Name),
+			Error:  invalid.Execute(&tool.Context{Args: args, Config: e.config}).Error,
 		}
 	}
 
