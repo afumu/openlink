@@ -53,7 +53,7 @@ interface SiteConfig {
 function getSiteConfig(): SiteConfig {
   const h = location.hostname;
   if (h.includes('gemini.google.com'))
-    return { editor: 'div.ql-editor.textarea.new-input-ui p, .ql-editor p, div[contenteditable="true"]', sendBtn: 'button.mat-mdc-icon-button.send-button, button[aria-label*="Send"]', stopBtn: null, fillMethod: 'execCommand', useObserver: true, responseSelector: 'model-response, .model-response-text, message-content' };
+    return { editor: 'div.ql-editor[contenteditable="true"]', sendBtn: 'button.send-button[aria-label*="发送"], button.send-button[aria-label*="Send"]', stopBtn: null, fillMethod: 'execCommand', useObserver: true, responseSelector: 'model-response, .model-response-text, message-content' };
   if (h.includes('chatgpt.com'))
     return { editor: '#prompt-textarea, .ProseMirror[contenteditable="true"]', sendBtn: 'button[data-testid="send-button"], button[aria-label*="Send"]', stopBtn: null, fillMethod: 'prosemirror', useObserver: false };
   if (h.includes('x.com') || h.includes('grok.com'))
@@ -115,27 +115,126 @@ function hashStr(s: string): number {
   return h >>> 0;
 }
 
+function getConversationId(): string {
+  const m = location.pathname.match(/\/chat\/([^/?#]+)/) || location.search.match(/[?&]id=([^&]+)/);
+  return m ? m[1] : '__default__';
+}
+
 function isExecuted(key: string): boolean {
   try {
-    const store = JSON.parse(localStorage.getItem('openlink_executed') || '{}');
-    return !!(store[location.href]?.[key]);
+    const store: Record<string, number> = JSON.parse(localStorage.getItem('openlink_executed') || '{}');
+    return !!store[key];
   } catch { return false; }
 }
 
+const TTL = 7 * 24 * 60 * 60 * 1000;
+
 function markExecuted(key: string): void {
   try {
-    const store = JSON.parse(localStorage.getItem('openlink_executed') || '{}');
-    if (!store[location.href]) store[location.href] = {};
-    store[location.href][key] = 1;
+    const store: Record<string, number> = JSON.parse(localStorage.getItem('openlink_executed') || '{}');
+    const now = Date.now();
+    for (const k of Object.keys(store)) {
+      if (now - store[k] > TTL) delete store[k];
+    }
+    store[key] = now;
     localStorage.setItem('openlink_executed', JSON.stringify(store));
   } catch {}
+}
+
+async function executeToolCallRaw(toolCall: any): Promise<string> {
+  const { authToken, apiUrl } = await chrome.storage.local.get(['authToken', 'apiUrl']);
+  if (!apiUrl) return '请先在插件中配置 API 地址';
+  const headers: any = { 'Content-Type': 'application/json' };
+  if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+  const response = await bgFetch(`${apiUrl}/exec`, { method: 'POST', headers, body: JSON.stringify(toolCall) });
+  if (response.status === 401) return '认证失败，请在插件中重新输入 Token';
+  if (!response.ok) return `[OpenLink 错误] HTTP ${response.status}`;
+  const result = JSON.parse(response.body);
+  return result.output || result.error || '[OpenLink] 空响应';
+}
+
+function renderToolCard(data: any, _full: string, sourceEl: Element, key: string, processed: Set<string>) {
+  // Find stable anchor: message-content's parent, which Angular doesn't rebuild
+  const messageContent = sourceEl.closest('message-content') ?? sourceEl;
+  const anchor = messageContent.parentElement ?? sourceEl.parentElement;
+  if (!anchor) return;
+
+  // Prevent duplicate cards
+  if (anchor.querySelector(`[data-openlink-key="${key}"]`)) return;
+
+  const args = data.args || {};
+  const card = document.createElement('div');
+  card.setAttribute('data-openlink-key', key);
+  card.style.cssText = 'border:1px solid #444;border-radius:8px;padding:12px;margin:8px 0;background:#1e1e2e;color:#cdd6f4;font-size:13px';
+
+  const header = document.createElement('div');
+  header.style.cssText = 'font-weight:bold;margin-bottom:8px';
+  header.innerHTML = `🔧 ${data.name} <span style="color:#888;font-size:11px">#${data.callId || ''}</span>`;
+  card.appendChild(header);
+
+  const argsBox = document.createElement('div');
+  argsBox.style.cssText = 'margin:8px 0;background:#181825;border-radius:6px;padding:8px';
+  for (const [k, v] of Object.entries(args)) {
+    const row = document.createElement('div');
+    row.style.cssText = 'margin-bottom:4px';
+    row.innerHTML = `<span style="color:#89b4fa;font-size:11px">${k}</span>`;
+    const val = document.createElement('div');
+    val.style.cssText = 'color:#cdd6f4;font-size:12px;font-family:monospace;white-space:pre-wrap;max-height:80px;overflow-y:auto';
+    val.textContent = typeof v === 'string' ? v : JSON.stringify(v);
+    row.appendChild(val);
+    argsBox.appendChild(row);
+  }
+  card.appendChild(argsBox);
+
+  const btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:8px';
+  const execBtn = document.createElement('button');
+  execBtn.textContent = '执行';
+  execBtn.style.cssText = 'padding:4px 12px;background:#1677ff;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px';
+  const skipBtn = document.createElement('button');
+  skipBtn.textContent = '忽略';
+  skipBtn.style.cssText = 'padding:4px 12px;background:#313244;color:#cdd6f4;border:1px solid #45475a;border-radius:6px;cursor:pointer;font-size:12px';
+  btnRow.appendChild(execBtn);
+  btnRow.appendChild(skipBtn);
+  card.appendChild(btnRow);
+
+  execBtn.onclick = async () => {
+    execBtn.disabled = true;
+    execBtn.textContent = '执行中...';
+    markExecuted(key);
+    try {
+      const text = await executeToolCallRaw(data);
+      const resultBox = document.createElement('div');
+      resultBox.style.cssText = 'margin-top:10px;background:#181825;border-radius:6px;padding:8px;max-height:200px;overflow-y:auto;font-family:monospace;font-size:12px;color:#cdd6f4;white-space:pre-wrap';
+      resultBox.textContent = text;
+      const insertBtn = document.createElement('button');
+      insertBtn.textContent = '插入到对话';
+      insertBtn.style.cssText = 'margin-top:6px;padding:4px 12px;background:#313244;color:#89b4fa;border:1px solid #89b4fa;border-radius:6px;cursor:pointer;font-size:12px';
+      insertBtn.onclick = () => fillAndSend(text, true);
+      card.appendChild(resultBox);
+      card.appendChild(insertBtn);
+      execBtn.textContent = '✅ 已执行';
+    } catch {
+      execBtn.textContent = '❌ 执行失败';
+      execBtn.disabled = false;
+    }
+  };
+
+  skipBtn.onclick = () => { card.remove(); processed.delete(key); };
+
+  anchor.insertBefore(card, messageContent);
 }
 
 function startDOMObserver(_responseSelector: string) {
   const processed = new Set<string>();
   const TOOL_RE = /<tool(?:\s[^>]*)?>[\s\S]*?<\/tool>/g;
+  let autoExecute = false;
+  chrome.storage.local.get(['autoExecute']).then(r => { autoExecute = !!r.autoExecute; });
+  chrome.storage.onChanged.addListener((changes) => {
+    if ('autoExecute' in changes) autoExecute = !!changes.autoExecute.newValue;
+  });
 
-  function scanText(text: string) {
+  function scanText(text: string, sourceEl?: Element) {
     if (!text.includes('<tool')) return;
     TOOL_RE.lastIndex = 0;
     let match;
@@ -144,41 +243,77 @@ function startDOMObserver(_responseSelector: string) {
       const inner = full.replace(/^<tool[^>]*>|<\/tool>$/g, '').trim();
       const data = parseXmlToolCall(full) || tryParseToolJSON(inner);
       if (!data) { console.warn('[OpenLink] 工具调用解析失败:', full); continue; }
-      // Use call_id as dedup key if present, otherwise fall back to content hash
-      const key = data.callId ? `${data.name}:${data.callId}` : String(hashStr(full));
-      if (processed.has(key) || isExecuted(key)) continue;
-      processed.add(key);
-      markExecuted(key);
+      const convId = getConversationId();
+      const key = data.callId ? `${convId}:${data.name}:${data.callId}` : String(hashStr(full));
+      if (processed.has(key)) continue;
       console.log('[OpenLink] 提取到工具调用:', data);
-      window.postMessage({ type: 'TOOL_CALL', data }, '*');
+
+      if (autoExecute) {
+        if (isExecuted(key)) continue;
+        processed.add(key);
+        markExecuted(key);
+        window.postMessage({ type: 'TOOL_CALL', data }, '*');
+      } else if (sourceEl) {
+        processed.add(key);
+        renderToolCard(data, full, sourceEl, key, processed);
+      } else {
+        if (isExecuted(key)) continue;
+        processed.add(key);
+        markExecuted(key);
+        window.postMessage({ type: 'TOOL_CALL', data }, '*');
+      }
     }
   }
 
   function scanNode(node: Node) {
-    if (node.nodeType === Node.TEXT_NODE) {
-      scanText(node.textContent || '');
-      return;
-    }
-    if (node.nodeType === Node.ELEMENT_NODE) {
-      const el = node as Element;
+    const el = node.nodeType === Node.TEXT_NODE ? (node as Text).parentElement : node as Element;
+    if (!el) return;
+    const mc = findResponseContainer(el);
+    if (mc) scheduleScan(mc);
+  }
+
+  function findResponseContainer(el: Element | null): Element | null {
+    while (el) {
       const tag = el.tagName.toLowerCase();
-      if (tag === 'pre' || tag === 'code') {
-        scanText(el.textContent || '');
-      } else {
-        el.querySelectorAll('pre, code').forEach(c => scanText(c.textContent || ''));
-      }
+      if (tag === 'message-content') return el;
+      el = el.parentElement;
     }
+    return null;
+  }
+
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  const pendingContainers = new Set<Element>();
+
+  function scheduleScan(container: Element) {
+    pendingContainers.add(container);
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      debounceTimer = null;
+      const els = [...pendingContainers];
+      pendingContainers.clear();
+      requestAnimationFrame(() => {
+        for (const el of els) scanText(el.textContent || '', el);
+      });
+    }, 800);
   }
 
   new MutationObserver(mutations => {
     for (const mutation of mutations) {
       if (mutation.type === 'characterData') {
-        scanText(mutation.target.textContent || '');
+        const container = findResponseContainer((mutation.target as Text).parentElement);
+        if (container) scheduleScan(container);
       } else {
         mutation.addedNodes.forEach(scanNode);
       }
     }
   }).observe(document.body, { childList: true, subtree: true, characterData: true });
+
+  // Initial scan for already-rendered tool calls (e.g. after page refresh)
+  requestAnimationFrame(() => {
+    document.querySelectorAll('message-content').forEach(el => {
+      scanText(el.textContent || '', el);
+    });
+  });
 }
 
 function injectInitButton() {

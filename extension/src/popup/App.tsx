@@ -8,11 +8,12 @@ export default function App() {
   const [reconfig, setReconfig] = useState(false)
   const [info, setInfo] = useState('')
   const [autoSend, setAutoSend] = useState(true)
+  const [autoExecute, setAutoExecute] = useState(false)
   const [delayMin, setDelayMin] = useState(1)
   const [delayMax, setDelayMax] = useState(4)
 
   useEffect(() => {
-    chrome.storage.local.get(['authToken', 'apiUrl', 'autoSend', 'delayMin', 'delayMax'], (result) => {
+    chrome.storage.local.get(['authToken', 'apiUrl', 'autoSend', 'autoExecute', 'delayMin', 'delayMax'], (result) => {
       if (result.authToken && result.apiUrl) {
         setSavedToken(result.authToken)
         setApiUrl(result.apiUrl)
@@ -22,6 +23,7 @@ export default function App() {
         setInfo('请输入认证 Token URL')
       }
       if (result.autoSend !== undefined) setAutoSend(result.autoSend)
+      if (result.autoExecute !== undefined) setAutoExecute(result.autoExecute)
       if (result.delayMin !== undefined) setDelayMin(result.delayMin)
       if (result.delayMax !== undefined) setDelayMax(result.delayMax)
     })
@@ -64,6 +66,11 @@ export default function App() {
   const handleAutoSendChange = (val: boolean) => {
     setAutoSend(val)
     chrome.storage.local.set({ autoSend: val })
+  }
+
+  const handleAutoExecuteChange = (val: boolean) => {
+    setAutoExecute(val)
+    chrome.storage.local.set({ autoExecute: val })
   }
 
   const handleDelayChange = (min: number, max: number) => {
@@ -124,6 +131,15 @@ export default function App() {
 
       {/* Auto send toggle */}
       <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-gray-300">自动执行工具</span>
+          <button
+            onClick={() => handleAutoExecuteChange(!autoExecute)}
+            className={`relative inline-flex w-11 h-6 rounded-full transition-colors duration-200 cursor-pointer flex-shrink-0 ${autoExecute ? 'bg-blue-600' : 'bg-gray-600'}`}
+          >
+            <span className={`inline-block w-5 h-5 mt-0.5 bg-white rounded-full shadow transition-transform duration-200 ${autoExecute ? 'translate-x-5' : 'translate-x-0.5'}`} />
+          </button>
+        </div>
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-300">自动提交</span>
           <button

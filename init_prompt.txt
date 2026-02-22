@@ -87,10 +87,10 @@
 
 ## 工具调用格式
 
-使用 XML parameter 格式调用工具，每次调用必须带唯一递增的 `call_id`（从 1 开始，每次调用加 1）：
+使用 XML parameter 格式调用工具，每次调用必须带唯一随机的 `call_id`（5位以上字母数字随机字符串，如 "a3f9k"、"x7m2p"，禁止使用自增数字）：
 
 ```
-<tool name="工具名" call_id="1">
+<tool name="工具名" call_id="a3f9k">
   <parameter name="参数名">参数值</parameter>
 </tool>
 ```
