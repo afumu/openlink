@@ -13,6 +13,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: cd extension && npm install && npm run build
+      - run: cd extension && zip -r ../extension-dist.zip dist/
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
