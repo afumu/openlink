@@ -99,10 +99,13 @@ func buildSystemInfo(rootDir string) string {
 }
 
 func (s *Server) handlePrompt(c *gin.Context) {
-	content, err := os.ReadFile(filepath.Join(s.config.RootDir, "init_prompt.txt"))
+	content, err := os.ReadFile(filepath.Join(s.config.RootDir, "prompts", "init_prompt.txt"))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "init_prompt.txt not found"})
-		return
+		if len(s.config.DefaultPrompt) == 0 {
+			c.JSON(http.StatusNotFound, gin.H{"error": "init_prompt.txt not found"})
+			return
+		}
+		content = s.config.DefaultPrompt
 	}
 	content = []byte(strings.ReplaceAll(string(content), "{{SYSTEM_INFO}}", buildSystemInfo(s.config.RootDir)))
 

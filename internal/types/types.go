@@ -37,10 +37,11 @@ type ToolResponse struct {
 }
 
 type Config struct {
-	RootDir string
-	Port    int
-	Timeout int
-	Token   string
+	RootDir       string
+	Port          int
+	Timeout       int
+	Token         string
+	DefaultPrompt []byte
 }
 
 type Settings struct {

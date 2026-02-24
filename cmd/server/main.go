@@ -9,6 +9,7 @@ import (
 	"github.com/afumu/openlink/internal/security"
 	"github.com/afumu/openlink/internal/server"
 	"github.com/afumu/openlink/internal/types"
+	"github.com/afumu/openlink/prompts"
 )
 
 func main() {
@@ -27,10 +28,11 @@ func main() {
 	}
 
 	config := &types.Config{
-		RootDir: *dir,
-		Port:    *port,
-		Timeout: *timeout,
-		Token:   token,
+		RootDir:       *dir,
+		Port:          *port,
+		Timeout:       *timeout,
+		Token:         token,
+		DefaultPrompt: prompts.DefaultPrompt,
 	}
 
 	fmt.Printf("\n认证 URL: http://127.0.0.1:%d/auth?token=%s\n", *port, token)
