@@ -48,12 +48,13 @@ interface SiteConfig {
   fillMethod: FillMethod;
   useObserver: boolean;
   responseSelector?: string;
+  supported?: boolean;
 }
 
 function getSiteConfig(): SiteConfig {
   const h = location.hostname;
   if (h.includes('gemini.google.com'))
-    return { editor: 'div.ql-editor[contenteditable="true"]', sendBtn: 'button.send-button[aria-label*="发送"], button.send-button[aria-label*="Send"]', stopBtn: null, fillMethod: 'execCommand', useObserver: true, responseSelector: 'model-response, .model-response-text, message-content' };
+    return { editor: 'div.ql-editor[contenteditable="true"]', sendBtn: 'button.send-button[aria-label*="发送"], button.send-button[aria-label*="Send"]', stopBtn: null, fillMethod: 'execCommand', useObserver: true, responseSelector: 'model-response, .model-response-text, message-content', supported: true };
   if (h.includes('chatgpt.com'))
     return { editor: '#prompt-textarea, .ProseMirror[contenteditable="true"]', sendBtn: 'button[data-testid="send-button"], button[aria-label*="Send"]', stopBtn: null, fillMethod: 'prosemirror', useObserver: false };
   if (h.includes('x.com') || h.includes('grok.com'))
@@ -67,7 +68,7 @@ function getSiteConfig(): SiteConfig {
   if (h.includes('openrouter.ai'))
     return { editor: 'textarea[data-testid="composer-input"], textarea[placeholder="Start a new message..."]', sendBtn: 'button[data-testid="send-button"], button[aria-label="Send message"]', stopBtn: null, fillMethod: 'value', useObserver: false };
   if (h.includes('qwen.ai'))
-    return { editor: 'textarea.message-input-textarea, #chat-input', sendBtn: 'button.omni-button-content-btn, div.message-input-right-button-send button', stopBtn: null, fillMethod: 'value', useObserver: true, responseSelector: '.chat-response-message' };
+    return { editor: 'textarea.message-input-textarea, #chat-input', sendBtn: 'button.omni-button-content-btn, div.message-input-right-button-send button', stopBtn: null, fillMethod: 'value', useObserver: true, responseSelector: '.chat-response-message', supported: true };
   if (h.includes('t3.chat'))
     return { editor: 'textarea#chat-input, textarea[placeholder*="Type your message"]', sendBtn: 'button[type="submit"], button[aria-label*="Send"]', stopBtn: null, fillMethod: 'value', useObserver: false };
   if (h.includes('aistudio.google.com'))
@@ -102,10 +103,9 @@ if (!(window as any).__OPENLINK_LOADED__) {
     }
   });
 
-  if (document.body) {
-    injectInitButton();
-  } else {
-    document.addEventListener('DOMContentLoaded', injectInitButton);
+  if (cfg.supported) {
+    if (document.body) injectInitButton();
+    else document.addEventListener('DOMContentLoaded', injectInitButton);
   }
 }
 
