@@ -17,7 +17,7 @@ jobs:
         with:
           node-version: 20
       - run: cd extension && npm install && npm run build
-      - run: sudo apt-get install -y zip && zip -r extension-dist.zip extension/dist/
+      - run: sudo apt-get install -y zip && zip -r /tmp/extension-dist.zip extension/dist/
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -27,6 +27,6 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - run: gh release upload ${{ github.ref_name }} extension-dist.zip
+      - run: gh release upload ${{ github.ref_name }} /tmp/extension-dist.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
