@@ -67,7 +67,7 @@ function getSiteConfig(): SiteConfig {
   if (h.includes('openrouter.ai'))
     return { editor: 'textarea[data-testid="composer-input"], textarea[placeholder="Start a new message..."]', sendBtn: 'button[data-testid="send-button"], button[aria-label="Send message"]', stopBtn: null, fillMethod: 'value', useObserver: false };
   if (h.includes('qwen.ai'))
-    return { editor: 'textarea.message-input-textarea, #chat-input', sendBtn: 'button.omni-button-content-btn, div.message-input-right-button-send button', stopBtn: null, fillMethod: 'value', useObserver: false };
+    return { editor: 'textarea.message-input-textarea, #chat-input', sendBtn: 'button.omni-button-content-btn, div.message-input-right-button-send button', stopBtn: null, fillMethod: 'value', useObserver: true, responseSelector: '.chat-response-message' };
   if (h.includes('t3.chat'))
     return { editor: 'textarea#chat-input, textarea[placeholder*="Type your message"]', sendBtn: 'button[type="submit"], button[aria-label*="Send"]', stopBtn: null, fillMethod: 'value', useObserver: false };
   if (h.includes('aistudio.google.com'))
@@ -276,6 +276,7 @@ function startDOMObserver(_responseSelector: string) {
     while (el) {
       const tag = el.tagName.toLowerCase();
       if (tag === 'message-content') return el;
+      if (el.classList.contains('chat-response-message')) return el;
       el = el.parentElement;
     }
     return null;
@@ -310,7 +311,7 @@ function startDOMObserver(_responseSelector: string) {
 
   // Initial scan for already-rendered tool calls (e.g. after page refresh)
   requestAnimationFrame(() => {
-    document.querySelectorAll('message-content').forEach(el => {
+    document.querySelectorAll('message-content, .chat-response-message').forEach(el => {
       scanText(el.textContent || '', el);
     });
   });
