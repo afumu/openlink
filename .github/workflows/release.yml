@@ -17,7 +17,7 @@ jobs:
         with:
           node-version: 20
       - run: cd extension && npm install && npm run build
-      - run: cd extension && zip -r ../extension-dist.zip dist/
+      - run: sudo apt-get install -y zip && zip -r extension-dist.zip extension/dist/
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
