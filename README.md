@@ -68,8 +68,63 @@ openlink
 |------|------|
 | `exec_cmd` | 执行 Shell 命令 |
 | `list_dir` | 列出目录内容 |
-| `read_file` | 读取文件内容 |
-| `write_file` | 写入文件内容 |
+| `read_file` | 读取文件内容（支持分页） |
+| `write_file` | 写入文件内容（支持追加/覆盖） |
+| `glob` | 按文件名模式搜索文件 |
+| `grep` | 正则搜索文件内容 |
+| `edit` | 精确替换文件中的字符串 |
+| `web_fetch` | 获取网页内容 |
+| `question` | 向用户提问并等待回答 |
+| `skill` | 加载自定义 Skill |
+| `todo_write` | 写入待办事项 |
+
+## Skills 扩展
+
+Skills 是放在本地的 Markdown 文件，AI 可以按需加载，用于扩展特定领域的能力（如部署流程、代码规范、项目约定等）。
+
+### Skills 目录（按优先级）
+
+OpenLink 会依次扫描以下目录，同名 Skill 以先找到的为准：
+
+```
+<工作目录>/.skills/
+<工作目录>/.openlink/skills/
+<工作目录>/.agent/skills/
+<工作目录>/.claude/skills/
+~/.openlink/skills/
+~/.agent/skills/
+~/.claude/skills/
+```
+
+### 创建 Skill
+
+在任意 Skills 目录下创建子目录，并在其中放置 `SKILL.md`：
+
+```
+.skills/
+└── deploy/
+    └── SKILL.md
+```
+
+`SKILL.md` 格式：
+
+```markdown
+---
+name: deploy
+description: 项目部署流程
+---
+
+## 部署步骤
+...
+```
+
+AI 通过 `skill` 工具加载：
+
+```
+<tool name="skill">
+  <parameter name="skill">deploy</parameter>
+</tool>
+```
 
 ---
 
