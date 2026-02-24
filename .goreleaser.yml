@@ -1,0 +1,22 @@
+version: 2
+
+builds:
+  - id: server
+    main: ./cmd/server
+    binary: openlink
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    env: [CGO_ENABLED=0]
+    ldflags: ["-s -w"]
+
+archives:
+  - formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "openlink_{{ .Os }}_{{ .Arch }}"
+
+release:
+  github:
+    owner: afumu
+    name: openlink
