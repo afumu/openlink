@@ -16,13 +16,7 @@ archives:
         formats: [zip]
     name_template: "openlink_{{ .Os }}_{{ .Arch }}"
 
-extra_files:
-  - glob: extension-dist.zip
-
 release:
   github:
     owner: afumu
     name: openlink
-
-git:
-  allow_dirty: true
