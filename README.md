@@ -62,14 +62,6 @@ openlink
 | ChatGPT | ✅ |
 | Google AI Studio | ✅ |
 | Arena.ai | ✅ |
-| DeepSeek | ✅ |
-| Grok (x.com / grok.com) | ✅ |
-| Kimi | ✅ |
-| Mistral | ✅ |
-| Perplexity | ✅ |
-| OpenRouter | ✅ |
-| T3 Chat | ✅ |
-| GitHub Copilot | ✅ |
 
 ---
 
