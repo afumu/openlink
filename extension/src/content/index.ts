@@ -76,6 +76,8 @@ function getSiteConfig(): SiteConfig {
     return { editor: '#copilot-chat-textarea, textarea[placeholder*="How can I help"]', sendBtn: 'button[aria-labelledby*="Send"], button:has(.octicon-paper-airplane)', stopBtn: null, fillMethod: 'value', useObserver: false };
   if (h.includes('z.ai'))
     return { editor: '#chat-input', sendBtn: '#send-message-button', stopBtn: null, fillMethod: 'value', useObserver: false };
+  if (h.includes('arena.ai'))
+    return { editor: 'textarea[name="message"], textarea[placeholder="Ask followup…"]', sendBtn: 'button[type="submit"]', stopBtn: null, fillMethod: 'value', useObserver: true, responseSelector: '.prose' };
   // Default: DeepSeek
   return { editor: '[data-slate-editor="true"]', sendBtn: '.operateBtn-JsB9e2:not(.disabled-ZaDDJC)', stopBtn: '.stop-yGpvO2 img', fillMethod: 'paste', useObserver: false };
 }
@@ -152,7 +154,7 @@ async function executeToolCallRaw(toolCall: any): Promise<string> {
 
 function renderToolCard(data: any, _full: string, sourceEl: Element, key: string, processed: Set<string>) {
   // Find stable anchor: message-content's parent, which Angular doesn't rebuild
-  const messageContent = sourceEl.closest('message-content') ?? sourceEl;
+  const messageContent = sourceEl.closest('message-content') ?? sourceEl.closest('.prose') ?? sourceEl;
   const anchor = messageContent.parentElement ?? sourceEl.parentElement;
   if (!anchor) return;
 
@@ -274,6 +276,7 @@ function startDOMObserver(_responseSelector: string) {
       const tag = el.tagName.toLowerCase();
       if (tag === 'message-content') return el;
       if (el.classList.contains('chat-response-message')) return el;
+      if (el.classList.contains('prose')) return el;
       el = el.parentElement;
     }
     return null;
