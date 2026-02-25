@@ -468,11 +468,14 @@ async function fillAndSend(result: string, autoSend = false) {
   } else if (fillMethod === 'value') {
     const ta = editor as HTMLTextAreaElement;
     const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
-    if (nativeInputValueSetter) nativeInputValueSetter.call(ta, result);
-    else ta.value = result;
+    const current = ta.value;
+    const next = current ? current + '\n' + result : result;
+    if (nativeInputValueSetter) nativeInputValueSetter.call(ta, next);
+    else ta.value = next;
     ta.dispatchEvent(new Event('input', { bubbles: true }));
   } else if (fillMethod === 'prosemirror') {
-    editor.innerHTML = result;
+    const current = editor.innerText.trim();
+    editor.innerHTML = current ? current + '\n' + result : result;
     editor.dispatchEvent(new Event('input', { bubbles: true }));
     editor.dispatchEvent(new Event('change', { bubbles: true }));
   }
