@@ -1,6 +1,6 @@
 # OpenLink
 
-让网页版 AI（Gemini、通义千问）直接访问你的本地文件系统和执行命令。
+让网页版 AI（Gemini、通义千问、ChatGPT、AI Studio 等）直接访问你的本地文件系统和执行命令。
 
 ## 工作原理
 
@@ -49,7 +49,7 @@ openlink
 
 ### 第四步：开始使用
 
-访问 [Gemini](https://gemini.google.com) 或[通义千问](https://qwen.ai)，点击页面右下角的「🔗 初始化」按钮，AI 即可开始使用本地工具。
+访问 [Gemini](https://gemini.google.com)、[通义千问](https://qwen.ai)、[ChatGPT](https://chatgpt.com)、[AI Studio](https://aistudio.google.com) 或 [Arena](https://arena.ai)，点击页面右下角的「🔗 初始化」按钮，AI 即可开始使用本地工具。
 
 ---
 
@@ -59,6 +59,17 @@ openlink
 |------|------|
 | Google Gemini | ✅ |
 | 通义千问 (Qwen) | ✅ |
+| ChatGPT | ✅ |
+| Google AI Studio | ✅ |
+| Arena.ai | ✅ |
+| DeepSeek | ✅ |
+| Grok (x.com / grok.com) | ✅ |
+| Kimi | ✅ |
+| Mistral | ✅ |
+| Perplexity | ✅ |
+| OpenRouter | ✅ |
+| T3 Chat | ✅ |
+| GitHub Copilot | ✅ |
 
 ---
 
