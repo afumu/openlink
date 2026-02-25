@@ -337,7 +337,34 @@ async function sendInitPrompt() {
   if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
   const resp = await bgFetch(`${apiUrl}/prompt`, { headers });
   if (!resp.ok) { alert('获取初始化提示词失败'); return; }
+
+  if (location.hostname.includes('aistudio.google.com')) {
+    await fillAiStudioSystemInstructions(resp.body);
+    return;
+  }
+
   fillAndSend(resp.body, true);
+}
+
+async function fillAiStudioSystemInstructions(prompt: string) {
+  const openBtn = document.querySelector<HTMLElement>('button[data-test-system-instructions-card]');
+  if (!openBtn) { fillAndSend(prompt, true); return; }
+
+  openBtn.click();
+  await new Promise(r => setTimeout(r, 600));
+
+  const textarea = document.querySelector<HTMLTextAreaElement>('textarea[aria-label="System instructions"]');
+  if (!textarea) { fillAndSend(prompt, true); return; }
+
+  const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+  if (nativeSetter) nativeSetter.call(textarea, prompt);
+  else textarea.value = prompt;
+  textarea.dispatchEvent(new Event('input', { bubbles: true }));
+
+  await new Promise(r => setTimeout(r, 300));
+
+  const closeBtn = document.querySelector<HTMLElement>('button[data-test-close-button]');
+  if (closeBtn) closeBtn.click();
 }
 
 function showQuestionPopup(question: string, options: string[]): Promise<string> {
