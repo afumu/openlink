@@ -71,7 +71,7 @@ function getSiteConfig(): SiteConfig {
   if (h.includes('t3.chat'))
     return { editor: 'textarea#chat-input, textarea[placeholder*="Type your message"]', sendBtn: 'button[type="submit"], button[aria-label*="Send"]', stopBtn: null, fillMethod: 'value', useObserver: false };
   if (h.includes('aistudio.google.com'))
-    return { editor: 'textarea.textarea[placeholder="Start typing a prompt"]', sendBtn: 'button[aria-label*="Run"], button[mattooltip*="Run"]', stopBtn: null, fillMethod: 'value', useObserver: false };
+    return { editor: 'textarea[placeholder*="Start typing a prompt"]', sendBtn: 'button.ctrl-enter-submits.ms-button-primary[type="submit"], button[aria-label*="Run"]', stopBtn: null, fillMethod: 'value', useObserver: true, responseSelector: 'ms-chat-turn' };
   if (h.includes('github.com'))
     return { editor: '#copilot-chat-textarea, textarea[placeholder*="How can I help"]', sendBtn: 'button[aria-labelledby*="Send"], button:has(.octicon-paper-airplane)', stopBtn: null, fillMethod: 'value', useObserver: false };
   if (h.includes('z.ai'))
@@ -275,6 +275,7 @@ function startDOMObserver(_responseSelector: string) {
     while (el) {
       const tag = el.tagName.toLowerCase();
       if (tag === 'message-content') return el;
+      if (tag === 'ms-chat-turn') return el;
       if (el.classList.contains('chat-response-message')) return el;
       if (el.classList.contains('prose')) return el;
       el = el.parentElement;
@@ -311,7 +312,7 @@ function startDOMObserver(_responseSelector: string) {
 
   // Initial scan for already-rendered tool calls (e.g. after page refresh)
   requestAnimationFrame(() => {
-    document.querySelectorAll('message-content, .chat-response-message').forEach(el => {
+    document.querySelectorAll('message-content, .chat-response-message, ms-chat-turn').forEach(el => {
       scanText(el.textContent || '', el);
     });
   });
