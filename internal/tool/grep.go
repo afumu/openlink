@@ -54,7 +54,13 @@ func (t *GrepTool) Execute(ctx *Context) *Result {
 		searchPath = "."
 	}
 
-	safePath, err := security.SafePath(ctx.Config.RootDir, searchPath)
+	var safePath string
+	var err error
+	if filepath.IsAbs(searchPath) {
+		safePath, err = resolveAbsPath(searchPath, ctx.Config.RootDir)
+	} else {
+		safePath, err = security.SafePath(ctx.Config.RootDir, searchPath)
+	}
 	if err != nil {
 		result.Status = "error"
 		result.Error = err.Error()

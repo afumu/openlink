@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -52,7 +53,13 @@ func (t *EditTool) Execute(ctx *Context) *Result {
 	newStr, _ := ctx.Args["new_string"].(string)
 	replaceAll, _ := ctx.Args["replace_all"].(bool)
 
-	safePath, err := security.SafePath(ctx.Config.RootDir, path)
+	var safePath string
+	var err error
+	if filepath.IsAbs(path) {
+		safePath, err = resolveAbsPath(path, ctx.Config.RootDir)
+	} else {
+		safePath, err = security.SafePath(ctx.Config.RootDir, path)
+	}
 	if err != nil {
 		result.Status = "error"
 		result.Error = err.Error()

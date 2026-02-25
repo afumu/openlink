@@ -1,8 +1,11 @@
 package tool
 
 import (
+	"os"
+	"path/filepath"
 	"time"
 
+	"github.com/afumu/openlink/internal/security"
 	"github.com/afumu/openlink/internal/types"
 )
 
@@ -32,4 +35,16 @@ type ToolInfo struct {
 	Name        string      `json:"name"`
 	Description string      `json:"description"`
 	Parameters  interface{} `json:"parameters,omitempty"`
+}
+
+// resolveAbsPath validates an absolute path against RootDir and common allowed roots (~/.claude, ~/.openlink, ~/.agent).
+func resolveAbsPath(path, rootDir string) (string, error) {
+	home, _ := os.UserHomeDir()
+	roots := []string{
+		rootDir,
+		filepath.Join(home, ".claude"),
+		filepath.Join(home, ".openlink"),
+		filepath.Join(home, ".agent"),
+	}
+	return security.SafeAbsPath(path, roots...)
 }

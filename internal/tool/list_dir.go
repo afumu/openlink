@@ -3,6 +3,7 @@ package tool
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -44,7 +45,13 @@ func (t *ListDirTool) Execute(ctx *Context) *Result {
 	result := &Result{StartTime: time.Now()}
 	path, _ := ctx.Args["path"].(string)
 
-	safePath, err := security.SafePath(ctx.Config.RootDir, path)
+	var safePath string
+	var err error
+	if filepath.IsAbs(path) {
+		safePath, err = resolveAbsPath(path, ctx.Config.RootDir)
+	} else {
+		safePath, err = security.SafePath(ctx.Config.RootDir, path)
+	}
 	if err != nil {
 		result.Status = "error"
 		result.Error = err.Error()

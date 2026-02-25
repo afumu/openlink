@@ -64,14 +64,7 @@ func (t *ReadFileTool) Execute(ctx *Context) *Result {
 	var safePath string
 	var err error
 	if filepath.IsAbs(path) {
-		home, _ := os.UserHomeDir()
-		roots := []string{
-			ctx.Config.RootDir,
-			filepath.Join(home, ".claude"),
-			filepath.Join(home, ".openlink"),
-			filepath.Join(home, ".agent"),
-		}
-		safePath, err = security.SafeAbsPath(path, roots...)
+		safePath, err = resolveAbsPath(path, ctx.Config.RootDir)
 	} else {
 		safePath, err = security.SafePath(ctx.Config.RootDir, path)
 	}
