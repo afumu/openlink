@@ -14,7 +14,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["*://*.gemini.google.com/*", "*://*.qwen.ai/*", "*://*.arena.ai/*"],
+      "matches": ["*://*.gemini.google.com/*", "*://*.qwen.ai/*", "*://*.arena.ai/*", "*://*.chatgpt.com/*"],
       "js": ["content.js"],
       "run_at": "document_start"
     }
@@ -22,7 +22,7 @@
   "web_accessible_resources": [
     {
       "resources": ["injected.js"],
-      "matches": ["*://*.gemini.google.com/*", "*://*.qwen.ai/*", "*://*.arena.ai/*"]
+      "matches": ["*://*.gemini.google.com/*", "*://*.qwen.ai/*", "*://*.arena.ai/*", "*://*.chatgpt.com/*"]
     }
   ]
 }

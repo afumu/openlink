@@ -55,7 +55,7 @@ function getSiteConfig(): SiteConfig {
   if (h.includes('gemini.google.com'))
     return { editor: 'div.ql-editor[contenteditable="true"]', sendBtn: 'button.send-button[aria-label*="发送"], button.send-button[aria-label*="Send"]', stopBtn: null, fillMethod: 'execCommand', useObserver: true, responseSelector: 'model-response, .model-response-text, message-content' };
   if (h.includes('chatgpt.com'))
-    return { editor: '#prompt-textarea, .ProseMirror[contenteditable="true"]', sendBtn: 'button[data-testid="send-button"], button[aria-label*="Send"]', stopBtn: null, fillMethod: 'prosemirror', useObserver: false };
+    return { editor: '.ProseMirror[contenteditable="true"]#prompt-textarea, .ProseMirror[contenteditable="true"]', sendBtn: 'button[data-testid="send-button"], button[aria-label*="Send"], button[aria-label*="发送"]', stopBtn: null, fillMethod: 'prosemirror', useObserver: true, responseSelector: '.markdown.prose' };
   if (h.includes('x.com') || h.includes('grok.com'))
     return { editor: 'textarea[aria-label="Ask Grok anything"], textarea[placeholder="Ask anything"], textarea', sendBtn: 'button[aria-label="Submit"], button.send-button', stopBtn: null, fillMethod: 'value', useObserver: false };
   if (h.includes('kimi.com'))
@@ -486,7 +486,11 @@ async function fillAndSend(result: string, autoSend = false) {
 
     showCountdownToast(delay, () => {
       const checkAndClick = (attempts = 0) => {
-        if (attempts > 50) return;
+        if (attempts > 50) {
+          const ed = querySelectorFirst(editorSel);
+          if (ed) ed.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
+          return;
+        }
         const sendBtn = querySelectorFirst(sendBtnSel);
         if (sendBtn) {
           sendBtn.click();
