@@ -53,15 +53,23 @@ openlink
 
 ---
 
+## 推荐平台
+
+> **目前测试效果最佳的平台是 [Google AI Studio](https://aistudio.google.com)**
+>
+> AI Studio 原生支持配置系统提示词（System Instructions），点击「🔗 初始化」后会自动将工具说明写入系统提示词，无需占用对话上下文，工具调用更稳定、更准确。
+>
+> 其他平台通过对话消息注入提示词，效果因模型而异。
+
 ## 支持的 AI 平台
 
-| 平台 | 状态 |
-|------|------|
-| Google Gemini | ✅ |
-| 通义千问 (Qwen) | ✅ |
-| ChatGPT | ✅ |
-| Google AI Studio | ✅ |
-| Arena.ai | ✅ |
+| 平台 | 状态 | 备注 |
+|------|------|------|
+| Google AI Studio | ✅ | 推荐，原生支持系统提示词 |
+| Google Gemini | ✅ | |
+| 通义千问 (Qwen) | ✅ | |
+| ChatGPT | ✅ | |
+| Arena.ai | ✅ | |
 
 ---
 
