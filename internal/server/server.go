@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/afumu/openlink/internal/executor"
-	"github.com/afumu/openlink/internal/proxy"
 	"github.com/afumu/openlink/internal/security"
 	"github.com/afumu/openlink/internal/skill"
 	"github.com/afumu/openlink/internal/types"
@@ -25,7 +24,6 @@ type Server struct {
 	config   *types.Config
 	router   *gin.Engine
 	executor *executor.Executor
-	proxyMgr *proxy.Manager
 }
 
 func New(config *types.Config) *Server {
@@ -36,7 +34,6 @@ func New(config *types.Config) *Server {
 		config:   config,
 		router:   router,
 		executor: executor.New(config),
-		proxyMgr: proxy.NewManager(),
 	}
 
 	s.setupRoutes()
@@ -65,13 +62,6 @@ func (s *Server) setupRoutes() {
 	s.router.GET("/prompt", s.handlePrompt)
 	s.router.GET("/skills", s.handleListSkills)
 	s.router.GET("/files", s.handleListFiles)
-
-	// LLM 代理路由
-	v1 := s.router.Group("/v1")
-	v1.POST("/chat/completions", s.handleOpenAIChat)
-	v1.POST("/messages", s.handleAnthropicMessages)
-	v1.GET("/sse", s.handleSSE)
-	v1.POST("/reply", s.handleProxyReply)
 }
 
 func (s *Server) handleHealth(c *gin.Context) {
