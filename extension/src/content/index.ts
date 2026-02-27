@@ -54,32 +54,8 @@ function getSiteConfig(): SiteConfig {
   const h = location.hostname;
   if (h.includes('gemini.google.com'))
     return { editor: 'div.ql-editor[contenteditable="true"]', sendBtn: 'button.send-button[aria-label*="发送"], button.send-button[aria-label*="Send"]', stopBtn: null, fillMethod: 'execCommand', useObserver: true, responseSelector: 'model-response, .model-response-text, message-content' };
-  if (h.includes('chatgpt.com'))
-    return { editor: '.ProseMirror[contenteditable="true"]#prompt-textarea, .ProseMirror[contenteditable="true"]', sendBtn: 'button[data-testid="send-button"], button[aria-label*="Send"], button[aria-label*="发送"]', stopBtn: null, fillMethod: 'prosemirror', useObserver: true, responseSelector: '.markdown.prose' };
-  if (h.includes('x.com') || h.includes('grok.com'))
-    return { editor: 'textarea[aria-label="Ask Grok anything"], textarea[placeholder="Ask anything"], textarea', sendBtn: 'button[aria-label="Submit"], button.send-button', stopBtn: null, fillMethod: 'value', useObserver: false };
-  if (h.includes('kimi.com'))
-    return { editor: '.chat-input-editor[contenteditable="true"], div[contenteditable="true"][data-lexical-editor="true"]', sendBtn: '.send-button, button[aria-label*="Send"]', stopBtn: null, fillMethod: 'execCommand', useObserver: false };
-  if (h.includes('chat.mistral.ai'))
-    return { editor: 'div.ProseMirror[contenteditable="true"]', sendBtn: '.ms-auto .flex.gap-2 button[type="submit"], button.bg-state-primary', stopBtn: null, fillMethod: 'execCommand', useObserver: false };
-  if (h.includes('perplexity.ai'))
-    return { editor: '#ask-input[contenteditable="true"], div[contenteditable="true"][data-lexical-editor="true"]', sendBtn: 'button[aria-label="Submit"], button[aria-label="Send"]', stopBtn: null, fillMethod: 'execCommand', useObserver: false };
-  if (h.includes('openrouter.ai'))
-    return { editor: 'textarea[data-testid="composer-input"], textarea[placeholder="Start a new message..."]', sendBtn: 'button[data-testid="send-button"], button[aria-label="Send message"]', stopBtn: null, fillMethod: 'value', useObserver: false };
-  if (h.includes('qwen.ai'))
-    return { editor: 'textarea.message-input-textarea, #chat-input', sendBtn: 'button.omni-button-content-btn, div.message-input-right-button-send button', stopBtn: null, fillMethod: 'value', useObserver: true, responseSelector: '.chat-response-message' };
-  if (h.includes('t3.chat'))
-    return { editor: 'textarea#chat-input, textarea[placeholder*="Type your message"]', sendBtn: 'button[type="submit"], button[aria-label*="Send"]', stopBtn: null, fillMethod: 'value', useObserver: false };
-  if (h.includes('aistudio.google.com'))
-    return { editor: 'textarea[placeholder*="Start typing a prompt"]', sendBtn: 'button.ctrl-enter-submits.ms-button-primary[type="submit"], button[aria-label*="Run"]', stopBtn: null, fillMethod: 'value', useObserver: true, responseSelector: 'ms-chat-turn' };
-  if (h.includes('github.com'))
-    return { editor: '#copilot-chat-textarea, textarea[placeholder*="How can I help"]', sendBtn: 'button[aria-labelledby*="Send"], button:has(.octicon-paper-airplane)', stopBtn: null, fillMethod: 'value', useObserver: false };
-  if (h.includes('z.ai'))
-    return { editor: '#chat-input', sendBtn: '#send-message-button', stopBtn: null, fillMethod: 'value', useObserver: false };
-  if (h.includes('arena.ai'))
-    return { editor: 'textarea[name="message"], textarea[placeholder="Ask followup…"]', sendBtn: 'button[type="submit"]', stopBtn: null, fillMethod: 'value', useObserver: true, responseSelector: '.prose' };
-  // Default: DeepSeek
-  return { editor: '[data-slate-editor="true"]', sendBtn: '.operateBtn-JsB9e2:not(.disabled-ZaDDJC)', stopBtn: '.stop-yGpvO2 img', fillMethod: 'paste', useObserver: false };
+  // Default: AI Studio
+  return { editor: 'textarea[placeholder*="Start typing a prompt"]', sendBtn: 'button.ctrl-enter-submits.ms-button-primary[type="submit"], button[aria-label*="Run"]', stopBtn: null, fillMethod: 'value', useObserver: true, responseSelector: 'ms-chat-turn' };
 }
 
 if (!(window as any).__OPENLINK_LOADED__) {
@@ -297,8 +273,6 @@ function startDOMObserver(_responseSelector: string) {
       const tag = el.tagName.toLowerCase();
       if (tag === 'message-content') return el;
       if (tag === 'ms-chat-turn') return el;
-      if (el.classList.contains('chat-response-message')) return el;
-      if (el.classList.contains('prose')) return el;
       el = el.parentElement;
     }
     return null;
@@ -378,7 +352,7 @@ function startDOMObserver(_responseSelector: string) {
 
   // Initial scan for already-rendered tool calls (e.g. after page refresh)
   requestAnimationFrame(() => {
-    document.querySelectorAll('message-content, .chat-response-message, ms-chat-turn').forEach(el => {
+    document.querySelectorAll('message-content, ms-chat-turn').forEach(el => {
       scanText(getCleanText(el), el);
     });
   });
@@ -883,5 +857,159 @@ function attachInputListener(editorEl: HTMLElement) {
     }
 
     dismiss();
+  });
+}
+
+// ── LLM 代理：监听 background 转发的 SSE 事件 ────────────────────────────────
+
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg.type === 'PROXY_REQUEST') {
+    handleProxyRequest(msg.payload);
+  }
+});
+
+// 串行队列，避免同时向 AI 发多条消息
+let proxyQueue = Promise.resolve();
+
+function handleProxyRequest(evt: { request_id: string; prompt: string }) {
+  proxyQueue = proxyQueue.then(() => processProxyRequest(evt));
+}
+
+async function processProxyRequest(evt: { request_id: string; prompt: string }) {
+  const { request_id, prompt } = evt;
+  console.log('[OpenLink Proxy] 收到代理请求', request_id);
+
+  try {
+    await fillAndSendProxy(prompt);
+    const reply = await waitForAIReply();
+    await postProxyReply(request_id, reply);
+    console.log('[OpenLink Proxy] 回复已回传', request_id);
+  } catch (e) {
+    console.error('[OpenLink Proxy] 处理失败', e);
+    await postProxyReply(request_id, `[代理错误] ${e}`).catch(() => {});
+  }
+}
+
+// 填入对话框并立即提交（不走 autoSend 随机延迟）
+async function fillAndSendProxy(text: string): Promise<void> {
+  const { editor: editorSel, sendBtn: sendBtnSel, fillMethod } = getSiteConfig();
+  const editor = querySelectorFirst(editorSel);
+  if (!editor) throw new Error('找不到编辑器');
+
+  editor.focus();
+
+  if (fillMethod === 'value') {
+    const ta = editor as HTMLTextAreaElement;
+    const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+    if (nativeSetter) nativeSetter.call(ta, text);
+    else ta.value = text;
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+  } else if (fillMethod === 'execCommand') {
+    document.execCommand('selectAll', false);
+    document.execCommand('insertText', false, text);
+  } else if (fillMethod === 'prosemirror') {
+    editor.innerHTML = text;
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+    editor.dispatchEvent(new Event('change', { bubbles: true }));
+  } else {
+    const dt = new DataTransfer();
+    dt.setData('text/plain', text);
+    editor.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+  }
+
+  await new Promise(r => setTimeout(r, 300));
+
+  const sendBtn = querySelectorFirst(sendBtnSel);
+  if (sendBtn) {
+    sendBtn.click();
+  } else {
+    editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
+  }
+}
+
+// 等待 AI 回复完成，返回回复文本。
+// 策略：先等待新的回复容器出现（或现有容器内容变化），
+// 再用 debounce(800ms) 判断内容已稳定。
+// 这样对"追加新元素"和"原地更新"两种平台都有效。
+function waitForAIReply(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const { responseSelector, useObserver } = getSiteConfig();
+
+    // 对于不支持 observer 的平台，固定等待后抓取最后一条回复
+    if (!useObserver || !responseSelector) {
+      setTimeout(() => resolve(getLastResponseText()), 8000);
+      return;
+    }
+
+    // 记录提交前最后一个回复元素及其文本，用于检测"原地更新"
+    const existingEls = document.querySelectorAll(responseSelector);
+    const existingCount = existingEls.length;
+    const lastExistingEl = existingEls.length > 0
+      ? existingEls[existingEls.length - 1] as HTMLElement
+      : null;
+    const lastExistingText = lastExistingEl?.innerText?.trim() ?? '';
+
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    let maxWaitTimer: ReturnType<typeof setTimeout> | null = null;
+    let resolved = false;
+
+    function finish() {
+      if (resolved) return;
+      resolved = true;
+      if (debounceTimer) clearTimeout(debounceTimer);
+      if (maxWaitTimer) clearTimeout(maxWaitTimer);
+      obs.disconnect();
+      resolve(getLastResponseText());
+    }
+
+    // 客户端最长等待 3 分钟（服务端超时 5 分钟，留足回传时间）
+    maxWaitTimer = setTimeout(() => {
+      if (!resolved) { resolved = true; obs.disconnect(); reject(new Error('等待 AI 回复超时')); }
+    }, 3 * 60 * 1000);
+
+    const obs = new MutationObserver(() => {
+      const current = document.querySelectorAll(responseSelector);
+      const hasNewEl = current.length > existingCount;
+
+      // 检测"原地更新"：最后一个元素的文本发生了变化
+      const currentLastEl = current.length > 0 ? current[current.length - 1] as HTMLElement : null;
+      const currentLastText = currentLastEl?.innerText?.trim() ?? '';
+      const inPlaceUpdate = !hasNewEl && currentLastEl !== null
+        && currentLastEl === lastExistingEl
+        && currentLastText !== lastExistingText;
+
+      if (!hasNewEl && !inPlaceUpdate) return;
+
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(finish, 800);
+    });
+
+    obs.observe(document.body, { childList: true, subtree: true, characterData: true });
+  });
+}
+
+// 提取最后一条 AI 回复的文本，过滤掉 UI 按钮等非内容节点
+function getLastResponseText(): string {
+  const { responseSelector } = getSiteConfig();
+  if (!responseSelector) return '';
+  const els = document.querySelectorAll(responseSelector);
+  if (els.length === 0) return '';
+  const last = els[els.length - 1] as HTMLElement;
+  // 克隆节点，移除已知 UI 元素（按钮、图标等），再取文本
+  const clone = last.cloneNode(true) as HTMLElement;
+  clone.querySelectorAll('button, svg, [aria-hidden="true"], .copy-button').forEach(el => el.remove());
+  return clone.innerText?.trim() ?? '';
+}
+
+// 把 AI 回复 POST 回服务器
+async function postProxyReply(requestId: string, content: string): Promise<void> {
+  const { authToken, apiUrl } = await chrome.storage.local.get(['authToken', 'apiUrl']);
+  if (!apiUrl) return;
+  const headers: any = { 'Content-Type': 'application/json' };
+  if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+  await bgFetch(`${apiUrl}/v1/reply`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ request_id: requestId, content }),
   });
 }
