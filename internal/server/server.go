@@ -190,12 +190,13 @@ func fixTabNewlines(s string) string {
 	return strings.ReplaceAll(s, "\t", "\n\t")
 }
 
+type skillItem struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
 func (s *Server) handleListSkills(c *gin.Context) {
 	skills := skill.LoadInfos(s.config.RootDir)
-	type skillItem struct {
-		Name        string `json:"name"`
-		Description string `json:"description"`
-	}
 	items := make([]skillItem, 0, len(skills))
 	for _, sk := range skills {
 		items = append(items, skillItem{Name: sk.Name, Description: sk.Description})
@@ -205,11 +206,20 @@ func (s *Server) handleListSkills(c *gin.Context) {
 
 func (s *Server) handleListFiles(c *gin.Context) {
 	q := strings.ToLower(c.Query("q"))
-	var files []string
+	if len(q) > 200 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "q too long"})
+		return
+	}
+	rootReal, err := filepath.EvalSymlinks(s.config.RootDir)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid root"})
+		return
+	}
 	skipDirs := map[string]bool{
 		".git": true, "node_modules": true, ".next": true,
 		"dist": true, "build": true, "vendor": true,
 	}
+	var files []string
 	filepath.WalkDir(s.config.RootDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
@@ -218,6 +228,13 @@ func (s *Server) handleListFiles(c *gin.Context) {
 			return filepath.SkipDir
 		}
 		if !d.IsDir() {
+			real, err := filepath.EvalSymlinks(path)
+			if err != nil {
+				return nil
+			}
+			if !strings.HasPrefix(real, rootReal+string(filepath.Separator)) && real != rootReal {
+				return nil
+			}
 			rel, _ := filepath.Rel(s.config.RootDir, path)
 			if q == "" || strings.Contains(strings.ToLower(rel), q) {
 				files = append(files, rel)

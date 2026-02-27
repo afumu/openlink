@@ -604,6 +604,8 @@ async function fillAndSend(result: string, autoSend = false) {
 
 let skillsCache: Array<{ name: string; description: string }> | null = null;
 let skillsCacheTime = 0;
+const filesCache = new Map<string, { ts: number; files: string[] }>();
+const FILES_TTL = 5000;
 
 async function fetchSkills(): Promise<Array<{ name: string; description: string }>> {
   if (skillsCache && Date.now() - skillsCacheTime < 30000) return skillsCache;
@@ -622,6 +624,8 @@ async function fetchSkills(): Promise<Array<{ name: string; description: string 
 }
 
 async function fetchFiles(q: string): Promise<string[]> {
+  const cached = filesCache.get(q);
+  if (cached && Date.now() - cached.ts < FILES_TTL) return cached.files;
   const { authToken, apiUrl } = await chrome.storage.local.get(['authToken', 'apiUrl']);
   if (!apiUrl) return [];
   const headers: any = {};
@@ -630,7 +634,9 @@ async function fetchFiles(q: string): Promise<string[]> {
     const resp = await bgFetch(`${apiUrl}/files?q=${encodeURIComponent(q)}`, { headers });
     if (!resp.ok) return [];
     const data = JSON.parse(resp.body);
-    return data.files || [];
+    const files = data.files || [];
+    filesCache.set(q, { ts: Date.now(), files });
+    return files;
   } catch { return []; }
 }
 
@@ -700,11 +706,15 @@ function showPickerPopup(
 
   document.addEventListener('keydown', onKeyDown, true);
   document.addEventListener('mousedown', onMouseDown, true);
+  window.addEventListener('scroll', reposition, true);
+  window.addEventListener('resize', reposition);
 
   function destroy() {
     popup.remove();
     document.removeEventListener('keydown', onKeyDown, true);
     document.removeEventListener('mousedown', onMouseDown, true);
+    window.removeEventListener('scroll', reposition, true);
+    window.removeEventListener('resize', reposition);
   }
 
   return destroy;
@@ -745,7 +755,8 @@ function replaceTokenInEditor(el: HTMLElement, token: string, replacement: strin
     const newCaret = tokenStart + replacement.length;
     ta.setSelectionRange(newCaret, newCaret);
     ta.dispatchEvent(new Event('input', { bubbles: true }));
-  } else if (fillMethod === 'execCommand') {
+  } else if (fillMethod === 'execCommand' || fillMethod === 'prosemirror') {
+    // prosemirror 也通过 execCommand insertText 拦截，不能直接写 innerHTML
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
     const range = sel.getRangeAt(0);
@@ -754,7 +765,6 @@ function replaceTokenInEditor(el: HTMLElement, token: string, replacement: strin
     const before = text.slice(0, pos);
     const tokenStart = before.lastIndexOf(token);
     if (tokenStart === -1) return;
-    // 选中 token 范围后替换
     const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
     let charCount = 0;
     let startNode: Text | null = null, startOffset = 0;
@@ -766,7 +776,7 @@ function replaceTokenInEditor(el: HTMLElement, token: string, replacement: strin
         startNode = node;
         startOffset = tokenStart - charCount;
       }
-      if (!endNode && charCount + len >= tokenStart + token.length) {
+      if (startNode && !endNode && charCount + len >= tokenStart + token.length) {
         endNode = node;
         endOffset = tokenStart + token.length - charCount;
         break;
@@ -780,18 +790,19 @@ function replaceTokenInEditor(el: HTMLElement, token: string, replacement: strin
       sel.addRange(range);
       document.execCommand('insertText', false, replacement);
     }
-  } else if (fillMethod === 'prosemirror') {
-    const current = el.innerText;
-    const pos = getCaretPosition(el);
-    const before = current.slice(0, pos);
-    const tokenStart = before.lastIndexOf(token);
-    if (tokenStart === -1) return;
-    const newText = current.slice(0, tokenStart) + replacement + current.slice(pos);
-    el.innerHTML = newText;
-    el.dispatchEvent(new Event('input', { bubbles: true }));
-    el.dispatchEvent(new Event('change', { bubbles: true }));
   } else {
-    // paste fallback
+    // paste fallback (DeepSeek/Slate)：先删除 token，再粘贴
+    const ta = el as HTMLTextAreaElement;
+    const val = ta.tagName === 'TEXTAREA' ? ta.value : el.innerText;
+    const tokenStart = val.lastIndexOf(token);
+    if (tokenStart !== -1 && ta.tagName === 'TEXTAREA') {
+      const newVal = val.slice(0, tokenStart) + val.slice(tokenStart + token.length);
+      const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+      if (nativeSetter) nativeSetter.call(ta, newVal);
+      else ta.value = newVal;
+      ta.setSelectionRange(tokenStart, tokenStart);
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+    }
     const dataTransfer = new DataTransfer();
     dataTransfer.setData('text/plain', replacement);
     el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dataTransfer, bubbles: true, cancelable: true }));
@@ -801,21 +812,24 @@ function replaceTokenInEditor(el: HTMLElement, token: string, replacement: strin
 function attachInputListener(editorEl: HTMLElement) {
   const { fillMethod } = getSiteConfig();
   let destroyPicker: (() => void) | null = null;
+  let inputVersion = 0;
 
   function dismiss() {
     if (destroyPicker) { destroyPicker(); destroyPicker = null; }
   }
 
   editorEl.addEventListener('input', async () => {
+    const currentVersion = ++inputVersion;
     const text = getEditorText(editorEl);
     const pos = getCaretPosition(editorEl);
     const before = text.slice(0, pos);
 
-    const slashMatch = before.match(/(?:^|[\s\n])(\/([\w\-]*))$/);
+    const slashMatch = before.match(/(?:^|[\s\n\u00a0])(\/([\w-]*))$/);
     if (slashMatch) {
       const token = slashMatch[1];
       const query = slashMatch[2].toLowerCase();
       const skills = await fetchSkills();
+      if (currentVersion !== inputVersion) return;
       const filtered = query
         ? skills.filter(s => s.name.toLowerCase().includes(query) || s.description.toLowerCase().includes(query))
         : skills;
@@ -839,6 +853,7 @@ function attachInputListener(editorEl: HTMLElement) {
       const token = atMatch[0];
       const query = atMatch[1];
       const files = await fetchFiles(query);
+      if (currentVersion !== inputVersion) return;
       dismiss();
       if (files.length === 0) return;
       destroyPicker = showPickerPopup(
