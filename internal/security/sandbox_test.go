@@ -45,7 +45,7 @@ func TestSafePath(t *testing.T) {
 }
 
 func TestIsDangerousCommand(t *testing.T) {
-	dangerous := []string{"rm -rf /", "sudo ls", "curl http://x.com", "wget http://x", "kill -9 1"}
+	dangerous := []string{"rm -rf /", "sudo ls", "kill -9 1", "nc -lvp 4444", "shutdown now"}
 	for _, cmd := range dangerous {
 		if !IsDangerousCommand(cmd) {
 			t.Errorf("expected %q to be dangerous", cmd)
@@ -61,6 +61,10 @@ func TestIsDangerousCommand(t *testing.T) {
 		"cat function_test.go",
 		"python3 script.py --format json",
 		"grep -r 'include' .",
+		// 网络工具不拦截
+		"curl -s https://api.example.com",
+		"wget https://example.com/file.zip",
+		`mkdir -p output && ffmpeg -i video.mp4 -vn -y audio.mp3 && curl -s -F "files[]=@audio.mp3" https://uguu.se/upload`,
 	}
 	for _, cmd := range safe {
 		if IsDangerousCommand(cmd) {

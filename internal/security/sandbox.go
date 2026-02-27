@@ -72,8 +72,9 @@ var dangerousPatterns = []string{
 }
 
 // dangerousCommands 需要单词边界匹配的单词命令（避免误匹配路径中的子串）
+// 注意：curl/wget 属于正常网络工具，不在拦截范围内
 var dangerousCommands = []string{
-	"mkfs", "dd", "format", "curl", "wget", "nc", "netcat",
+	"mkfs", "format", "nc", "netcat",
 	"sudo", "reboot", "shutdown",
 }
 
