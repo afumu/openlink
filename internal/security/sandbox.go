@@ -66,17 +66,51 @@ func SafeAbsPath(targetPath string, allowedRoots ...string) (string, error) {
 	return "", errors.New("path outside sandbox")
 }
 
-var DangerousCommands = []string{
-	"rm -rf", "rm -fr", "mkfs", "dd", "format",
-	"> /dev/", "curl", "wget", "nc", "netcat",
-	"sudo", "chmod 777", "kill -9", "reboot", "shutdown",
+// dangerousPatterns 需要子串匹配的多词危险模式（含空格或特殊字符，不会误匹配普通路径）
+var dangerousPatterns = []string{
+	"rm -rf", "rm -fr", "> /dev/", "chmod 777", "kill -9",
+}
+
+// dangerousCommands 需要单词边界匹配的单词命令（避免误匹配路径中的子串）
+var dangerousCommands = []string{
+	"mkfs", "dd", "format", "curl", "wget", "nc", "netcat",
+	"sudo", "reboot", "shutdown",
+}
+
+// isCmdSeparator 判断字符是否为 shell 命令分隔符或空白
+func isCmdSeparator(b byte) bool {
+	switch b {
+	case ' ', '\t', '\n', ';', '|', '&', '(', ')', '`', '\'', '"', '<', '>':
+		return true
+	}
+	return false
 }
 
 func IsDangerousCommand(cmd string) bool {
 	lower := strings.ToLower(cmd)
-	for _, dangerous := range DangerousCommands {
-		if strings.Contains(lower, dangerous) {
+
+	// 多词模式：直接子串匹配
+	for _, p := range dangerousPatterns {
+		if strings.Contains(lower, p) {
 			return true
+		}
+	}
+
+	// 单词命令：要求前后是分隔符或字符串边界
+	for _, word := range dangerousCommands {
+		idx := 0
+		for {
+			pos := strings.Index(lower[idx:], word)
+			if pos < 0 {
+				break
+			}
+			abs := idx + pos
+			before := abs == 0 || isCmdSeparator(lower[abs-1])
+			after := abs+len(word) >= len(lower) || isCmdSeparator(lower[abs+len(word)])
+			if before && after {
+				return true
+			}
+			idx = abs + 1
 		}
 	}
 	return false

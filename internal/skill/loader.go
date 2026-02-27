@@ -2,7 +2,6 @@ package skill
 
 import (
 	"fmt"
-	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
@@ -38,27 +37,34 @@ func LoadInfos(rootDir string) []Info {
 			continue
 		}
 		log.Printf("[Skill] 扫描目录: %s", dir)
-		filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
-			if err != nil || d.IsDir() {
-				return nil
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
+		for _, entry := range entries {
+			// 跟随软链接：用 os.Stat 而非 entry.Type()
+			subPath := filepath.Join(dir, entry.Name())
+			info, err := os.Stat(subPath)
+			if err != nil || !info.IsDir() {
+				continue
 			}
-			if !strings.EqualFold(d.Name(), "skill.md") {
-				return nil
+			skillFile := findSkillMd(subPath)
+			if skillFile == "" {
+				continue
 			}
-			data, err := os.ReadFile(path)
+			data, err := os.ReadFile(skillFile)
 			if err != nil {
-				return nil
+				continue
 			}
-			info := parse(path, string(data))
-			info.Dir = filepath.Dir(path)
-			info.Location = path
-			log.Printf("[Skill] 加载: name=%s description=%.60s", info.Name, info.Description)
-			if _, exists := seen[info.Name]; !exists {
-				order = append(order, info.Name)
+			sk := parse(skillFile, string(data))
+			sk.Dir = subPath
+			sk.Location = skillFile
+			log.Printf("[Skill] 加载: name=%s description=%.60s", sk.Name, sk.Description)
+			if _, exists := seen[sk.Name]; !exists {
+				order = append(order, sk.Name)
 			}
-			seen[info.Name] = info
-			return nil
-		})
+			seen[sk.Name] = sk
+		}
 	}
 
 	log.Printf("[Skill] 共加载 %d 个 skill", len(order))
@@ -106,6 +112,20 @@ func FindSkill(rootDir, name string) (content, dir string, err error) {
 		}
 	}
 	return "", "", fmt.Errorf("skill %q not found", name)
+}
+
+// findSkillMd 在目录下查找 SKILL.md（大小写不敏感）
+func findSkillMd(dir string) string {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return ""
+	}
+	for _, e := range entries {
+		if !e.IsDir() && strings.EqualFold(e.Name(), "skill.md") {
+			return filepath.Join(dir, e.Name())
+		}
+	}
+	return ""
 }
 
 func parse(path, content string) Info {

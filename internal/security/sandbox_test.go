@@ -52,7 +52,16 @@ func TestIsDangerousCommand(t *testing.T) {
 		}
 	}
 
-	safe := []string{"ls -la", "echo hello", "go build ./..."}
+	safe := []string{
+		"ls -la", "echo hello", "go build ./...",
+		// 路径中含危险词子串，不应误报
+		"mkdir -p .skills/wechat-article-writer/references",
+		"mkdir -p .skills/wechat-article-writer/assets/templates",
+		"ls references/",
+		"cat function_test.go",
+		"python3 script.py --format json",
+		"grep -r 'include' .",
+	}
 	for _, cmd := range safe {
 		if IsDangerousCommand(cmd) {
 			t.Errorf("expected %q to be safe", cmd)
