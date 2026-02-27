@@ -247,14 +247,13 @@ function startDOMObserver(_responseSelector: string) {
       if (processed.has(key)) continue;
       console.log('[OpenLink] 提取到工具调用:', data);
 
-      if (autoExecute) {
-        if (isExecuted(key)) continue;
-        processed.add(key);
-        markExecuted(key);
-        window.postMessage({ type: 'TOOL_CALL', data }, '*');
-      } else if (sourceEl) {
+      if (sourceEl) {
         processed.add(key);
         renderToolCard(data, full, sourceEl, key, processed);
+        if (autoExecute && !isExecuted(key)) {
+          markExecuted(key);
+          window.postMessage({ type: 'TOOL_CALL', data }, '*');
+        }
       } else {
         if (isExecuted(key)) continue;
         processed.add(key);
@@ -291,6 +290,7 @@ function startDOMObserver(_responseSelector: string) {
   }
 
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  let maxWaitTimer: ReturnType<typeof setTimeout> | null = null;
   const pendingContainers = new Set<Element>();
 
   // 块级标签：遍历到这些元素时在前面插入换行
@@ -327,9 +327,21 @@ function startDOMObserver(_responseSelector: string) {
 
   function scheduleScan(container: Element) {
     pendingContainers.add(container);
+    if (!maxWaitTimer) {
+      maxWaitTimer = setTimeout(() => {
+        maxWaitTimer = null;
+        if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
+        const els = [...pendingContainers];
+        pendingContainers.clear();
+        requestAnimationFrame(() => {
+          for (const el of els) scanText(getCleanText(el), el);
+        });
+      }, 3000);
+    }
     if (debounceTimer) clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
       debounceTimer = null;
+      if (maxWaitTimer) { clearTimeout(maxWaitTimer); maxWaitTimer = null; }
       const els = [...pendingContainers];
       pendingContainers.clear();
       requestAnimationFrame(() => {
