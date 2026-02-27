@@ -265,7 +265,14 @@ function startDOMObserver(_responseSelector: string) {
   }
 
   function scanNode(node: Node) {
-    const el = node.nodeType === Node.TEXT_NODE ? (node as Text).parentElement : node as Element;
+    let el: Element | null;
+    if (node.nodeType === Node.TEXT_NODE) {
+      el = (node as Text).parentElement;
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      el = node as Element;
+    } else {
+      return;
+    }
     if (!el) return;
     const mc = findResponseContainer(el);
     if (mc) scheduleScan(mc);
@@ -286,6 +293,38 @@ function startDOMObserver(_responseSelector: string) {
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   const pendingContainers = new Set<Element>();
 
+  // 块级标签：遍历到这些元素时在前面插入换行
+  const BLOCK_TAGS = new Set(['P', 'DIV', 'BR', 'LI', 'TR', 'PRE', 'BLOCKQUOTE', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6']);
+
+  // 跳过这些元素及其子树（UI 噪声）
+  const SKIP_TAGS = new Set(['MS-THOUGHT-CHUNK', 'MAT-ICON', 'SCRIPT', 'STYLE', 'BUTTON', 'MAT-EXPANSION-PANEL-HEADER']);
+
+  function extractText(node: Node, buf: string[]): void {
+    if (node.nodeType === Node.TEXT_NODE) {
+      buf.push(node.textContent || '');
+      return;
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+    const el = node as Element;
+
+    // 跳过 aria-hidden 元素（Material Icons 图标文字）和噪声标签
+    if (el.getAttribute('aria-hidden') === 'true') return;
+    if (SKIP_TAGS.has(el.tagName)) return;
+
+    // 块级元素前插换行，保证多行结构
+    if (BLOCK_TAGS.has(el.tagName)) buf.push('\n');
+
+    for (const child of Array.from(el.childNodes)) {
+      extractText(child, buf);
+    }
+  }
+
+  function getCleanText(el: Element): string {
+    const buf: string[] = [];
+    extractText(el, buf);
+    return buf.join('');
+  }
+
   function scheduleScan(container: Element) {
     pendingContainers.add(container);
     if (debounceTimer) clearTimeout(debounceTimer);
@@ -294,7 +333,7 @@ function startDOMObserver(_responseSelector: string) {
       const els = [...pendingContainers];
       pendingContainers.clear();
       requestAnimationFrame(() => {
-        for (const el of els) scanText(el.textContent || '', el);
+        for (const el of els) scanText(getCleanText(el), el);
       });
     }, 800);
   }
@@ -313,7 +352,7 @@ function startDOMObserver(_responseSelector: string) {
   // Initial scan for already-rendered tool calls (e.g. after page refresh)
   requestAnimationFrame(() => {
     document.querySelectorAll('message-content, .chat-response-message, ms-chat-turn').forEach(el => {
-      scanText(el.textContent || '', el);
+      scanText(getCleanText(el), el);
     });
   });
 }
