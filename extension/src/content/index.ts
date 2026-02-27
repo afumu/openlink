@@ -1,3 +1,13 @@
+function parseOptions(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === 'string') { try { return JSON.parse(raw); } catch { return []; } }
+  return [];
+}
+
+function getNativeSetter() {
+  return Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+}
+
 function parseXmlToolCall(raw: string): any | null {
   const nameMatch = raw.match(/^<tool\s+name="([^"]+)"(?:\s+call_id="([^"]+)")?/);
   if (!nameMatch) return null;
@@ -303,7 +313,7 @@ function startDOMObserver(_responseSelector: string) {
     // 块级元素前插换行，保证多行结构
     if (BLOCK_TAGS.has(el.tagName)) buf.push('\n');
 
-    for (const child of Array.from(el.childNodes)) {
+    for (const child of el.childNodes) {
       extractText(child, buf);
     }
   }
@@ -396,7 +406,7 @@ async function fillAiStudioSystemInstructions(prompt: string) {
   const textarea = document.querySelector<HTMLTextAreaElement>('textarea[aria-label="System instructions"]');
   if (!textarea) { fillAndSend(prompt, true); return; }
 
-  const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+  const nativeSetter = getNativeSetter();
   if (nativeSetter) nativeSetter.call(textarea, prompt);
   else textarea.value = prompt;
   textarea.dispatchEvent(new Event('input', { bubbles: true }));
@@ -435,7 +445,7 @@ async function executeToolCall(toolCall: any) {
   if (toolCall.name === 'question') {
     const q: string = toolCall.args?.question ?? '';
     const rawOpts = toolCall.args?.options;
-    const opts: string[] = Array.isArray(rawOpts) ? rawOpts : (typeof rawOpts === 'string' ? (() => { try { return JSON.parse(rawOpts); } catch { return []; } })() : []);
+    const opts: string[] = parseOptions(rawOpts);
     const answer = opts.length > 0 ? await showQuestionPopup(q, opts) : (prompt(q) ?? '');
     fillAndSend(answer, false);
     return;
@@ -534,7 +544,7 @@ async function fillAndSend(result: string, autoSend = false) {
     document.execCommand('insertText', false, result);
   } else if (fillMethod === 'value') {
     const ta = editor as HTMLTextAreaElement;
-    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+    const nativeInputValueSetter = getNativeSetter();
     const current = ta.value;
     const next = current ? current + '\n' + result : result;
     if (nativeInputValueSetter) nativeInputValueSetter.call(ta, next);
@@ -740,7 +750,7 @@ function replaceTokenInEditor(el: HTMLElement, token: string, replacement: strin
     const tokenStart = before.lastIndexOf(token);
     if (tokenStart === -1) return;
     const newVal = val.slice(0, tokenStart) + replacement + after;
-    const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+    const nativeSetter = getNativeSetter();
     if (nativeSetter) nativeSetter.call(ta, newVal);
     else ta.value = newVal;
     const newCaret = tokenStart + replacement.length;
@@ -788,7 +798,7 @@ function replaceTokenInEditor(el: HTMLElement, token: string, replacement: strin
     const tokenStart = val.lastIndexOf(token);
     if (tokenStart !== -1 && ta.tagName === 'TEXTAREA') {
       const newVal = val.slice(0, tokenStart) + val.slice(tokenStart + token.length);
-      const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+      const nativeSetter = getNativeSetter();
       if (nativeSetter) nativeSetter.call(ta, newVal);
       else ta.value = newVal;
       ta.setSelectionRange(tokenStart, tokenStart);
@@ -900,7 +910,7 @@ async function fillAndSendProxy(text: string): Promise<void> {
 
   if (fillMethod === 'value') {
     const ta = editor as HTMLTextAreaElement;
-    const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+    const nativeSetter = getNativeSetter();
     if (nativeSetter) nativeSetter.call(ta, text);
     else ta.value = text;
     ta.dispatchEvent(new Event('input', { bubbles: true }));

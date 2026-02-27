@@ -7,14 +7,14 @@
     "service_worker": "background.js",
     "type": "module"
   },
-  "permissions": ["activeTab", "storage"],
+  "permissions": ["activeTab", "storage", "tabs"],
   "host_permissions": ["http://127.0.0.1:*/*"],
   "action": {
     "default_popup": "popup.html"
   },
   "content_scripts": [
     {
-      "matches": ["*://*.gemini.google.com/*", "*://*.qwen.ai/*", "*://*.arena.ai/*", "*://*.chatgpt.com/*", "*://aistudio.google.com/*"],
+      "matches": ["*://*.gemini.google.com/*", "*://aistudio.google.com/*"],
       "js": ["content.js"],
       "run_at": "document_start"
     }
@@ -22,7 +22,7 @@
   "web_accessible_resources": [
     {
       "resources": ["injected.js"],
-      "matches": ["*://*.gemini.google.com/*", "*://*.qwen.ai/*", "*://*.arena.ai/*", "*://*.chatgpt.com/*", "*://aistudio.google.com/*"]
+      "matches": ["*://*.gemini.google.com/*", "*://aistudio.google.com/*"]
     }
   ]
 }

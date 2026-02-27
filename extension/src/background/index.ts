@@ -64,6 +64,7 @@ async function connectSSE() {
     }
 
     broadcastToTabs({ type: 'SSE_STATUS', connected: true });
+    sseRetryCount = 0;
 
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
@@ -90,13 +91,17 @@ async function connectSSE() {
   scheduleRetry();
 }
 
+let sseRetryCount = 0;
+
 function scheduleRetry() {
   if (!sseUrl) return;
   if (sseRetryTimer) clearTimeout(sseRetryTimer);
+  const delay = Math.min(3000 * Math.pow(2, sseRetryCount), 60000);
+  sseRetryCount++;
   sseRetryTimer = setTimeout(() => {
     sseRetryTimer = null;
     connectSSE();
-  }, 3000);
+  }, delay);
 }
 
 function parseSSEEvent(raw: string) {
