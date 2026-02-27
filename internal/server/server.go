@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/subtle"
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -59,6 +60,8 @@ func (s *Server) setupRoutes() {
 	s.router.GET("/tools", s.handleListTools)
 	s.router.POST("/exec", s.handleExec)
 	s.router.GET("/prompt", s.handlePrompt)
+	s.router.GET("/skills", s.handleListSkills)
+	s.router.GET("/files", s.handleListFiles)
 }
 
 func (s *Server) handleHealth(c *gin.Context) {
@@ -185,4 +188,45 @@ func fixTabNewlines(s string) string {
 	// 把每个 \t 替换为 \n\t，模拟换行+缩进
 	// 这样 "\t\t\tfoo\t\t\tbar" → "\n\t\t\tfoo\n\t\t\tbar"
 	return strings.ReplaceAll(s, "\t", "\n\t")
+}
+
+func (s *Server) handleListSkills(c *gin.Context) {
+	skills := skill.LoadInfos(s.config.RootDir)
+	type skillItem struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+	}
+	items := make([]skillItem, 0, len(skills))
+	for _, sk := range skills {
+		items = append(items, skillItem{Name: sk.Name, Description: sk.Description})
+	}
+	c.JSON(http.StatusOK, gin.H{"skills": items})
+}
+
+func (s *Server) handleListFiles(c *gin.Context) {
+	q := strings.ToLower(c.Query("q"))
+	var files []string
+	skipDirs := map[string]bool{
+		".git": true, "node_modules": true, ".next": true,
+		"dist": true, "build": true, "vendor": true,
+	}
+	filepath.WalkDir(s.config.RootDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() && skipDirs[d.Name()] {
+			return filepath.SkipDir
+		}
+		if !d.IsDir() {
+			rel, _ := filepath.Rel(s.config.RootDir, path)
+			if q == "" || strings.Contains(strings.ToLower(rel), q) {
+				files = append(files, rel)
+			}
+		}
+		if len(files) >= 50 {
+			return filepath.SkipAll
+		}
+		return nil
+	})
+	c.JSON(http.StatusOK, gin.H{"files": files})
 }
