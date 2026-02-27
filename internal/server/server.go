@@ -144,6 +144,15 @@ func (s *Server) handleExec(c *gin.Context) {
 
 	log.Printf("[OpenLink] 工具调用: name=%s, args=%+v\n", req.Name, req.Args)
 
+	// 修复 AI 模型将换行符误写为 \t 的情况（仅对 edit 工具的字符串参数）
+	if req.Name == "edit" {
+		for _, key := range []string{"old_string", "new_string"} {
+			if v, ok := req.Args[key].(string); ok {
+				req.Args[key] = fixTabNewlines(v)
+			}
+		}
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.config.Timeout)*time.Second)
 	defer cancel()
 	resp := s.executor.Execute(ctx, &req)
@@ -159,4 +168,21 @@ func (s *Server) handleExec(c *gin.Context) {
 
 func (s *Server) Run() error {
 	return s.router.Run(fmt.Sprintf("127.0.0.1:%d", s.config.Port))
+}
+
+// fixTabNewlines 修复 AI 模型将换行符误写为 \t 的情况。
+// 当 old_string 里不含真正的 \n，但含有 \t 序列时，
+// 尝试把行间的 \t 替换为 \n + 原有缩进。
+func fixTabNewlines(s string) string {
+	// 如果已经含有真正的换行符，说明 AI 输出正常，不做处理
+	if strings.Contains(s, "\n") {
+		return s
+	}
+	// 如果不含 \t，也不需要处理
+	if !strings.Contains(s, "\t") {
+		return s
+	}
+	// 把每个 \t 替换为 \n\t，模拟换行+缩进
+	// 这样 "\t\t\tfoo\t\t\tbar" → "\n\t\t\tfoo\n\t\t\tbar"
+	return strings.ReplaceAll(s, "\t", "\n\t")
 }

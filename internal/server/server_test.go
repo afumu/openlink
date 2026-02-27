@@ -174,7 +174,9 @@ func TestHandlePrompt(t *testing.T) {
 	})
 
 	t.Run("existing init_prompt.txt returns content", func(t *testing.T) {
-		os.WriteFile(filepath.Join(s.config.RootDir, "init_prompt.txt"), []byte("hello prompt"), 0644)
+		promptDir := filepath.Join(s.config.RootDir, "prompts")
+		os.MkdirAll(promptDir, 0755)
+		os.WriteFile(filepath.Join(promptDir, "init_prompt.txt"), []byte("hello prompt"), 0644)
 		w := httptest.NewRecorder()
 		req := httptest.NewRequest("GET", "/prompt", nil)
 		req.Header.Set("Authorization", "Bearer testtoken")
