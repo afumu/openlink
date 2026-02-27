@@ -650,9 +650,11 @@ function showPickerPopup(
   popup.style.cssText = 'position:fixed;z-index:2147483647;background:#1e1e2e;border:1px solid #45475a;border-radius:8px;padding:4px;min-width:240px;max-width:400px;max-height:240px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,0.5)';
 
   let activeIdx = 0;
+  const rows: HTMLElement[] = [];
 
   function render() {
     popup.innerHTML = '';
+    rows.length = 0;
     if (items.length === 0) {
       const empty = document.createElement('div');
       empty.style.cssText = 'padding:8px 12px;color:#6c7086;font-size:12px';
@@ -673,18 +675,33 @@ function showPickerPopup(
         sub.textContent = item.sub;
         row.appendChild(sub);
       }
-      row.onmouseenter = () => { activeIdx = i; render(); };
+      row.onmouseenter = () => { setActive(i); };
       row.onclick = () => { onSelect(item.value); destroy(); };
+      rows.push(row);
       popup.appendChild(row);
     });
   }
 
+  function setActive(i: number) {
+    if (rows[activeIdx]) rows[activeIdx].style.background = 'transparent';
+    activeIdx = i;
+    if (rows[activeIdx]) {
+      rows[activeIdx].style.background = '#313244';
+      rows[activeIdx].scrollIntoView({ block: 'nearest' });
+    }
+  }
+
   function reposition() {
     const rect = anchorEl.getBoundingClientRect();
-    const popupH = Math.min(240, items.length * 44 + 8);
-    const top = rect.top - popupH - 6;
+    const popupH = Math.min(240, popup.scrollHeight || 240);
+    const spaceAbove = rect.top - 6;
+    const spaceBelow = window.innerHeight - rect.bottom - 6;
+    if (spaceAbove >= popupH || spaceAbove >= spaceBelow) {
+      popup.style.top = `${Math.max(4, rect.top - popupH - 6)}px`;
+    } else {
+      popup.style.top = `${rect.bottom + 6}px`;
+    }
     popup.style.left = `${rect.left}px`;
-    popup.style.top = `${Math.max(4, top)}px`;
     popup.style.width = `${Math.min(400, rect.width)}px`;
   }
 
@@ -694,8 +711,8 @@ function showPickerPopup(
 
   function onKeyDown(e: KeyboardEvent) {
     if (!items.length) return;
-    if (e.key === 'ArrowDown') { e.preventDefault(); e.stopPropagation(); activeIdx = (activeIdx + 1) % items.length; render(); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); activeIdx = (activeIdx - 1 + items.length) % items.length; render(); }
+    if (e.key === 'ArrowDown') { e.preventDefault(); e.stopPropagation(); setActive((activeIdx + 1) % items.length); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); setActive((activeIdx - 1 + items.length) % items.length); }
     else if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); onSelect(items[activeIdx].value); destroy(); }
     else if (e.key === 'Escape') { onDismiss(); destroy(); }
   }
