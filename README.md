@@ -191,12 +191,6 @@ openlink [选项]
 
 [提交 Issue](https://github.com/afumu/openlink/issues)
 
-## 交流群
-
-欢迎加微信交流，备注 `openlink`：
-
-**微信号：afumudev**
-
 ---
 
 ## 致谢
