@@ -11,9 +11,10 @@ export default function App() {
   const [autoExecute, setAutoExecute] = useState(false)
   const [delayMin, setDelayMin] = useState(1)
   const [delayMax, setDelayMax] = useState(4)
+  const [debugMode, setDebugMode] = useState(false)
 
   useEffect(() => {
-    chrome.storage.local.get(['authToken', 'apiUrl', 'autoSend', 'autoExecute', 'delayMin', 'delayMax'], (result) => {
+    chrome.storage.local.get(['authToken', 'apiUrl', 'autoSend', 'autoExecute', 'delayMin', 'delayMax', 'debugMode'], (result) => {
       if (result.authToken && result.apiUrl) {
         setSavedToken(result.authToken)
         setApiUrl(result.apiUrl)
@@ -26,6 +27,7 @@ export default function App() {
       if (result.autoExecute !== undefined) setAutoExecute(result.autoExecute)
       if (result.delayMin !== undefined) setDelayMin(result.delayMin)
       if (result.delayMax !== undefined) setDelayMax(result.delayMax)
+      if (result.debugMode !== undefined) setDebugMode(result.debugMode)
     })
   }, [])
 
@@ -79,6 +81,11 @@ export default function App() {
     setDelayMin(safeMin)
     setDelayMax(safeMax)
     chrome.storage.local.set({ delayMin: safeMin, delayMax: safeMax })
+  }
+
+  const handleDebugModeChange = (val: boolean) => {
+    setDebugMode(val)
+    chrome.storage.local.set({ debugMode: val })
   }
 
   const statusColor = status === 'connected' ? 'bg-emerald-400' : status === 'checking' ? 'bg-yellow-400' : 'bg-red-400'
@@ -147,6 +154,15 @@ export default function App() {
             className={`relative inline-flex w-11 h-6 rounded-full transition-colors duration-200 cursor-pointer flex-shrink-0 ${autoSend ? 'bg-blue-600' : 'bg-gray-600'}`}
           >
             <span className={`inline-block w-5 h-5 mt-0.5 bg-white rounded-full shadow transition-transform duration-200 ${autoSend ? 'translate-x-5' : 'translate-x-0.5'}`} />
+          </button>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-gray-300">调试模式</span>
+          <button
+            onClick={() => handleDebugModeChange(!debugMode)}
+            className={`relative inline-flex w-11 h-6 rounded-full transition-colors duration-200 cursor-pointer flex-shrink-0 ${debugMode ? 'bg-emerald-600' : 'bg-gray-600'}`}
+          >
+            <span className={`inline-block w-5 h-5 mt-0.5 bg-white rounded-full shadow transition-transform duration-200 ${debugMode ? 'translate-x-5' : 'translate-x-0.5'}`} />
           </button>
         </div>
 

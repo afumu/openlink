@@ -62,8 +62,11 @@ interface SiteConfig {
 
 function getSiteConfig(): SiteConfig {
   const h = location.hostname;
+  const p = location.pathname;
   if (h.includes('gemini.google.com'))
     return { editor: 'div.ql-editor[contenteditable="true"]', sendBtn: 'button.send-button[aria-label*="发送"], button.send-button[aria-label*="Send"]', stopBtn: null, fillMethod: 'execCommand', useObserver: true, responseSelector: 'model-response, .model-response-text, message-content' };
+  if (h === 'arena.ai' && (p.startsWith('/text/direct') || p.startsWith('/c/')))
+    return { editor: 'textarea[name="message"][placeholder*="Ask followup"], textarea[name="message"], form textarea, textarea', sendBtn: 'form button[type="submit"]:not([disabled]), form button[type="submit"]', stopBtn: null, fillMethod: 'value', useObserver: true, responseSelector: '.prose' };
   // Default: AI Studio
   return { editor: 'textarea[placeholder*="Start typing a prompt"]', sendBtn: 'button.ctrl-enter-submits.ms-button-primary[type="submit"], button[aria-label*="Run"]', stopBtn: null, fillMethod: 'value', useObserver: true, responseSelector: 'ms-chat-turn' };
 }
@@ -72,6 +75,7 @@ if (!(window as any).__OPENLINK_LOADED__) {
   (window as any).__OPENLINK_LOADED__ = true;
 
   const cfg = getSiteConfig();
+  let debugMode = false;
 
   if (!cfg.useObserver) {
     const script = document.createElement('script');
@@ -90,21 +94,25 @@ if (!(window as any).__OPENLINK_LOADED__) {
     }
   });
 
-  if (document.body) injectInitButton();
-  else document.addEventListener('DOMContentLoaded', injectInitButton);
+  const mountDebugUi = () => {
+    injectInitButton();
+    if (debugMode) injectDebugPanel();
+    else removeDebugPanel();
+  };
 
-  function mountInputListener() {
-    const editorEl = querySelectorFirst(cfg.editor);
-    if (editorEl) {
-      attachInputListener(editorEl as HTMLElement);
-    } else {
-      const obs = new MutationObserver(() => {
-        const el = querySelectorFirst(cfg.editor);
-        if (el) { obs.disconnect(); attachInputListener(el as HTMLElement); }
-      });
-      obs.observe(document.body, { childList: true, subtree: true });
+  chrome.storage.local.get(['debugMode']).then((result) => {
+    debugMode = !!result.debugMode;
+    if (document.body) mountDebugUi();
+  });
+  chrome.storage.onChanged.addListener((changes) => {
+    if ('debugMode' in changes) {
+      debugMode = !!changes.debugMode.newValue;
+      if (document.body) mountDebugUi();
     }
-  }
+  });
+
+  if (!document.body) document.addEventListener('DOMContentLoaded', mountDebugUi);
+
   if (document.body) mountInputListener();
   else document.addEventListener('DOMContentLoaded', mountInputListener);
 }
@@ -153,11 +161,60 @@ async function executeToolCallRaw(toolCall: any): Promise<string> {
   return result.output || result.error || '[OpenLink] 空响应';
 }
 
-function renderToolCard(data: any, _full: string, sourceEl: Element, key: string, processed: Set<string>) {
-  // Find stable anchor: message-content's parent, which Angular doesn't rebuild
+function getToolCardMount(sourceEl: Element): { anchor: Element; before: Element | null } | null {
+  if (location.hostname === 'arena.ai' && (location.pathname.startsWith('/text/direct') || location.pathname.startsWith('/c/'))) {
+    const prose = sourceEl.closest('.prose') ?? sourceEl;
+    const findActionRow = (root: Element): Element | null => {
+      return Array.from(root.children).find((child) => {
+        if (!(child instanceof Element)) return false;
+        return !!child.querySelector('button[aria-label="Like this response"], button[aria-label="Dislike this response"]');
+      }) as Element | null;
+    };
+
+    let cursor: Element | null = prose;
+    while (cursor) {
+      const actionRow = findActionRow(cursor);
+      if (actionRow) return { anchor: cursor, before: actionRow };
+      cursor = cursor.parentElement;
+    }
+
+    const proseWrapper = prose.parentElement?.parentElement ?? prose.parentElement;
+    if (proseWrapper) {
+      return { anchor: proseWrapper, before: proseWrapper.firstElementChild ?? null };
+    }
+  }
+
   const messageContent = sourceEl.closest('message-content') ?? sourceEl.closest('.prose') ?? sourceEl;
   const anchor = messageContent.parentElement ?? sourceEl.parentElement;
-  if (!anchor) return;
+  if (!anchor) return null;
+  return { anchor, before: messageContent };
+}
+
+function isArenaAssistantResponse(el: Element | null): boolean {
+  if (!el || location.hostname !== 'arena.ai' || !(location.pathname.startsWith('/text/direct') || location.pathname.startsWith('/c/'))) return true;
+  let cursor: Element | null = el.closest('.prose') ?? el;
+  while (cursor) {
+    const hasActionRow = Array.from(cursor.children).some((child) => {
+      if (!(child instanceof Element)) return false;
+      return !!child.querySelector('button[aria-label="Like this response"], button[aria-label="Dislike this response"]');
+    });
+    if (hasActionRow) return true;
+    cursor = cursor.parentElement;
+  }
+  return false;
+}
+
+function shouldRenderArenaToolText(text: string, sourceEl?: Element): boolean {
+  if (location.hostname !== 'arena.ai' || !(location.pathname.startsWith('/text/direct') || location.pathname.startsWith('/c/'))) return true;
+  if (sourceEl?.closest('pre, code')) return false;
+  const toolOnly = text.replace(/<tool(?:\s[^>]*)?>[\s\S]*?<\/tool>/g, ' ').replace(/\s+/g, ' ').trim();
+  return toolOnly.length <= 24;
+}
+
+function renderToolCard(data: any, _full: string, sourceEl: Element, key: string, processed: Set<string>) {
+  const mount = getToolCardMount(sourceEl);
+  if (!mount) return;
+  const { anchor, before } = mount;
 
   // Prevent duplicate cards
   if (anchor.querySelector(`[data-openlink-key="${key}"]`)) return;
@@ -208,6 +265,7 @@ function renderToolCard(data: any, _full: string, sourceEl: Element, key: string
       resultBox.style.cssText = 'margin-top:10px;background:#181825;border-radius:6px;padding:8px;max-height:200px;overflow-y:auto;font-family:monospace;font-size:12px;color:#cdd6f4;white-space:pre-wrap';
       resultBox.textContent = text;
       const insertBtn = document.createElement('button');
+      insertBtn.type = 'button';
       insertBtn.textContent = '插入到对话';
       insertBtn.style.cssText = 'margin-top:6px;padding:4px 12px;background:#313244;color:#89b4fa;border:1px solid #89b4fa;border-radius:6px;cursor:pointer;font-size:12px';
       insertBtn.onclick = () => fillAndSend(text, true);
@@ -222,12 +280,14 @@ function renderToolCard(data: any, _full: string, sourceEl: Element, key: string
 
   skipBtn.onclick = () => { card.remove(); processed.delete(key); };
 
-  anchor.insertBefore(card, messageContent);
+  if (before) anchor.insertBefore(card, before);
+  else anchor.appendChild(card);
 }
 
-function startDOMObserver(_responseSelector: string) {
+function startDOMObserver(responseSelector: string) {
   const processed = new Set<string>();
   const TOOL_RE = /<tool(?:\s[^>]*)?>[\s\S]*?<\/tool>/g;
+  const responseSelectors = responseSelector.split(',').map(s => s.trim()).filter(Boolean);
   let autoExecute = false;
   chrome.storage.local.get(['autoExecute']).then(r => { autoExecute = !!r.autoExecute; });
   chrome.storage.onChanged.addListener((changes) => {
@@ -236,6 +296,8 @@ function startDOMObserver(_responseSelector: string) {
 
   function scanText(text: string, sourceEl?: Element) {
     if (!text.includes('<tool')) return;
+    if (sourceEl && !isArenaAssistantResponse(sourceEl)) return;
+    if (!shouldRenderArenaToolText(text, sourceEl)) return;
     TOOL_RE.lastIndex = 0;
     let match;
     while ((match = TOOL_RE.exec(text)) !== null) {
@@ -280,9 +342,9 @@ function startDOMObserver(_responseSelector: string) {
 
   function findResponseContainer(el: Element | null): Element | null {
     while (el) {
-      const tag = el.tagName.toLowerCase();
-      if (tag === 'message-content') return el;
-      if (tag === 'ms-chat-turn') return el;
+      if (responseSelectors.some(sel => {
+        try { return el!.matches(sel); } catch { return false; }
+      }) && isArenaAssistantResponse(el)) return el;
       el = el.parentElement;
     }
     return null;
@@ -362,18 +424,151 @@ function startDOMObserver(_responseSelector: string) {
 
   // Initial scan for already-rendered tool calls (e.g. after page refresh)
   requestAnimationFrame(() => {
-    document.querySelectorAll('message-content, ms-chat-turn').forEach(el => {
+    document.querySelectorAll(responseSelector).forEach(el => {
+      if (!isArenaAssistantResponse(el)) return;
       scanText(getCleanText(el), el);
     });
   });
 }
 
-function injectInitButton() {
+function injectFloatingButton(id: string, label: string, bottom: number, background: string, onClick: () => void | Promise<void>) {
+  document.getElementById(id)?.remove();
   const btn = document.createElement('button');
-  btn.textContent = '🔗 初始化';
-  btn.style.cssText = 'position:fixed;bottom:80px;right:20px;z-index:99999;padding:8px 14px;background:#1677ff;color:#fff;border:none;border-radius:20px;cursor:pointer;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,0.3)';
-  btn.onclick = sendInitPrompt;
+  btn.id = id;
+  btn.type = 'button';
+  btn.textContent = label;
+  btn.style.cssText = `position:fixed;bottom:${bottom}px;right:20px;z-index:99999;padding:8px 14px;background:${background};color:#fff;border:none;border-radius:20px;cursor:pointer;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,0.3)`;
+  btn.onclick = () => { void onClick(); };
   document.body.appendChild(btn);
+}
+
+function injectInitButton() {
+  injectFloatingButton('openlink-init-btn', '🔗 初始化', 80, '#1677ff', sendInitPrompt);
+  injectFloatingButton('openlink-test-btn', '🧪 插入TEST', 130, '#16a34a', () => fillAndSend('TEST', false));
+}
+
+function removeDebugPanel() {
+  document.getElementById('openlink-debug-panel')?.remove();
+}
+
+function shortenHtml(html: string, max = 4000): string {
+  return html.length > max ? `${html.slice(0, max)}\n...[truncated ${html.length - max} chars]` : html;
+}
+
+function elementSnapshot(el: Element | null) {
+  if (!el) return null;
+  const htmlEl = el as HTMLElement;
+  const rect = htmlEl.getBoundingClientRect();
+  return {
+    tag: el.tagName.toLowerCase(),
+    id: el.id || '',
+    className: el.className || '',
+    name: el.getAttribute('name') || '',
+    placeholder: el.getAttribute('placeholder') || '',
+    type: el.getAttribute('type') || '',
+    ariaLabel: el.getAttribute('aria-label') || '',
+    readOnly: htmlEl instanceof HTMLTextAreaElement ? htmlEl.readOnly : false,
+    disabled: htmlEl instanceof HTMLButtonElement || htmlEl instanceof HTMLTextAreaElement ? htmlEl.disabled : false,
+    value: htmlEl instanceof HTMLTextAreaElement ? htmlEl.value : '',
+    text: (htmlEl.innerText || '').slice(0, 500),
+    rect: { top: rect.top, left: rect.left, width: rect.width, height: rect.height },
+    outerHTML: shortenHtml(el.outerHTML || ''),
+  };
+}
+
+function collectDebugData() {
+  const cfg = getSiteConfig();
+  const editorCandidates = getEditorCandidates(cfg.editor);
+  const visibleTextareas = getVisibleTextareas();
+  const currentEditor = getCurrentEditor(cfg.editor);
+  const sendButtons = Array.from(document.querySelectorAll(cfg.sendBtn.split(',').map(s => s.trim()).filter(Boolean).join(',')));
+  const responseNodes = cfg.responseSelector ? Array.from(document.querySelectorAll(cfg.responseSelector)).slice(-3) : [];
+  const toolNodes = Array.from(document.querySelectorAll('.prose, message-content, ms-chat-turn'))
+    .filter((el) => (el.textContent || '').includes('<tool'))
+    .slice(-3);
+  return {
+    capturedAt: new Date().toISOString(),
+    location: { href: location.href, hostname: location.hostname, pathname: location.pathname },
+    siteConfig: cfg,
+    activeElement: elementSnapshot(document.activeElement as Element | null),
+    currentEditor: elementSnapshot(currentEditor),
+    visibleTextareaCount: visibleTextareas.length,
+    editorCandidateCount: editorCandidates.length,
+    visibleTextareas: visibleTextareas.map((el) => elementSnapshot(el)),
+    editorCandidates: editorCandidates.map((el) => elementSnapshot(el)),
+    sendButtons: sendButtons.map((el) => elementSnapshot(el)),
+    latestResponses: responseNodes.map((el) => elementSnapshot(el)),
+    latestToolContainers: toolNodes.map((el) => elementSnapshot(el)),
+  };
+}
+
+async function copyText(text: string) {
+  await navigator.clipboard.writeText(text);
+  showToast('已复制到剪贴板', 2000);
+}
+
+function downloadText(filename: string, text: string) {
+  const blob = new Blob([text], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showToast(`已下载 ${filename}`, 2000);
+}
+
+function injectDebugPanel() {
+  if (document.getElementById('openlink-debug-panel')) return;
+  const panel = document.createElement('div');
+  panel.id = 'openlink-debug-panel';
+  panel.style.cssText = 'position:fixed;bottom:180px;right:20px;z-index:99999;width:220px;background:#111827;color:#f3f4f6;border:1px solid #374151;border-radius:12px;padding:10px;box-shadow:0 8px 24px rgba(0,0,0,0.35);font-size:12px';
+
+  const title = document.createElement('div');
+  title.textContent = 'OpenLink 调试模式';
+  title.style.cssText = 'font-weight:700;margin-bottom:8px';
+  panel.appendChild(title);
+
+  const actions: Array<{ label: string; onClick: () => void | Promise<void> }> = [
+    {
+      label: '复制调试 JSON',
+      onClick: () => copyText(JSON.stringify(collectDebugData(), null, 2)),
+    },
+    {
+      label: '下载调试 JSON',
+      onClick: () => {
+        const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+        downloadText(`openlink-debug-${stamp}.json`, JSON.stringify(collectDebugData(), null, 2));
+      },
+    },
+    {
+      label: '复制当前输入框 HTML',
+      onClick: () => copyText((collectDebugData().currentEditor?.outerHTML) || ''),
+    },
+    {
+      label: '复制最近回复 HTML',
+      onClick: () => {
+        const last = collectDebugData().latestResponses.at(-1);
+        void copyText(last?.outerHTML || '');
+      },
+    },
+  ];
+
+  for (const action of actions) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = action.label;
+    btn.style.cssText = 'display:block;width:100%;margin-top:6px;padding:7px 10px;background:#1f2937;color:#f9fafb;border:1px solid #4b5563;border-radius:8px;cursor:pointer;text-align:left';
+    btn.onclick = () => { void action.onClick(); };
+    panel.appendChild(btn);
+  }
+
+  const hint = document.createElement('div');
+  hint.textContent = '用于抓取站点兼容信息';
+  hint.style.cssText = 'margin-top:8px;color:#9ca3af;line-height:1.4';
+  panel.appendChild(hint);
+
+  document.body.appendChild(panel);
 }
 
 async function bgFetch(url: string, options?: any): Promise<{ ok: boolean; status: number; body: string }> {
@@ -529,10 +724,122 @@ function querySelectorFirst(selectors: string): HTMLElement | null {
   return null;
 }
 
+function isVisibleElement(el: HTMLElement): boolean {
+  const rect = el.getBoundingClientRect();
+  const style = window.getComputedStyle(el);
+  if (el.getAttribute('aria-hidden') === 'true') return false;
+  if (el.getAttribute('tabindex') === '-1') return false;
+  if (style.visibility === 'hidden') return false;
+  if (style.display === 'none') return false;
+  if (style.opacity === '0') return false;
+  return rect.width > 0 && rect.height > 0;
+}
+
+function scoreEditorCandidate(el: HTMLElement): number {
+  const rect = el.getBoundingClientRect();
+  const inViewport = rect.bottom > 0 && rect.top < window.innerHeight;
+  const nearBottom = Math.max(0, Math.min(window.innerHeight, rect.bottom));
+  const area = Math.min(rect.width * rect.height, 200000);
+  const submitBtn = getSendButtonForEditor(el, getSiteConfig().sendBtn);
+  const submitScore = submitBtn && !(submitBtn as HTMLButtonElement).disabled ? 2_000_000 : submitBtn ? 1_000_000 : 0;
+  return submitScore + (inViewport ? 500_000 : 0) + nearBottom * 100 + area;
+}
+
+function getEditorCandidates(editorSel: string): HTMLElement[] {
+  const selectors = editorSel.split(',').map(s => s.trim()).filter(Boolean);
+  const candidates = selectors.flatMap(sel => Array.from(document.querySelectorAll<HTMLElement>(sel)));
+  return candidates
+    .filter((el) => {
+      if (!el.isConnected) return false;
+      if (el instanceof HTMLTextAreaElement && (el.disabled || el.readOnly)) return false;
+      if (!isVisibleElement(el)) return false;
+      return true;
+    });
+}
+
+function getVisibleTextareas(): HTMLTextAreaElement[] {
+  return Array.from(document.querySelectorAll('textarea')).filter((el): el is HTMLTextAreaElement => {
+    return el instanceof HTMLTextAreaElement && isVisibleElement(el);
+  });
+}
+
+function getCurrentEditor(editorSel: string): HTMLElement | null {
+  const selectors = editorSel.split(',').map(s => s.trim()).filter(Boolean);
+  const active = document.activeElement as HTMLElement | null;
+  if (active && selectors.some(sel => {
+    try { return active.matches(sel); } catch { return false; }
+  })) return active;
+
+  const ranked = getEditorCandidates(editorSel).sort((a, b) => scoreEditorCandidate(b) - scoreEditorCandidate(a));
+  if (ranked[0]) return ranked[0];
+  return querySelectorFirst(editorSel);
+}
+
+function getSendButtonForEditor(editor: HTMLElement, sendBtnSel: string): HTMLElement | null {
+  const form = editor.closest('form');
+  if (form) {
+    for (const sel of sendBtnSel.split(',').map(s => s.trim()).filter(Boolean)) {
+      const btn = form.querySelector(sel) as HTMLElement | null;
+      if (btn && isVisibleElement(btn)) return btn;
+    }
+  }
+  return querySelectorFirst(sendBtnSel);
+}
+
+function applyTextareaValue(ta: HTMLTextAreaElement, next: string): void {
+  const previous = ta.value;
+  const nativeInputValueSetter = getNativeSetter();
+  if (nativeInputValueSetter) nativeInputValueSetter.call(ta, next);
+  else ta.value = next;
+  const tracker = (ta as any)._valueTracker;
+  if (tracker && typeof tracker.setValue === 'function') tracker.setValue(previous);
+  const caret = next.length;
+  try { ta.setSelectionRange(caret, caret); } catch {}
+  ta.dispatchEvent(new Event('focus', { bubbles: true }));
+  ta.dispatchEvent(new Event('input', { bubbles: true }));
+  ta.dispatchEvent(new Event('change', { bubbles: true }));
+  ta.dispatchEvent(new Event('blur', { bubbles: true }));
+  ta.dispatchEvent(new KeyboardEvent('keyup', { key: 'End', code: 'End', bubbles: true }));
+}
+
+async function fillArenaTextarea(result: string, editorSel: string, sendBtnSel: string): Promise<HTMLTextAreaElement | null> {
+  const candidates = getEditorCandidates(editorSel)
+    .filter((el): el is HTMLTextAreaElement => el instanceof HTMLTextAreaElement)
+    .sort((a, b) => scoreEditorCandidate(b) - scoreEditorCandidate(a));
+
+  for (const ta of candidates) {
+    ta.focus();
+    const current = ta.value;
+    const next = current ? current + '\n' + result : result;
+    applyTextareaValue(ta, next);
+    await Promise.resolve();
+    const submitBtn = getSendButtonForEditor(ta, sendBtnSel) as HTMLButtonElement | null;
+    if (ta.value === next || (submitBtn && !submitBtn.disabled)) return ta;
+  }
+
+  const visibleTextareas = getVisibleTextareas();
+  if (visibleTextareas.length === 1) {
+    const ta = visibleTextareas[0];
+    ta.focus();
+    const current = ta.value;
+    const next = current ? current + '\n' + result : result;
+    applyTextareaValue(ta, next);
+    await Promise.resolve();
+    return ta;
+  }
+
+  showToast(`未命中活动输入框，候选数: ${candidates.length}`, 4000);
+  return null;
+}
+
 async function fillAndSend(result: string, autoSend = false) {
   const { editor: editorSel, sendBtn: sendBtnSel, fillMethod } = getSiteConfig();
-  const editor = querySelectorFirst(editorSel);
-  if (!editor) return;
+  const editor = getCurrentEditor(editorSel);
+  if (!editor) {
+    const visibleTextareas = getVisibleTextareas().length;
+    showToast(`未找到输入框，可见 textarea: ${visibleTextareas}`, 4000);
+    return;
+  }
 
   editor.focus();
 
@@ -543,13 +850,15 @@ async function fillAndSend(result: string, autoSend = false) {
   } else if (fillMethod === 'execCommand') {
     document.execCommand('insertText', false, result);
   } else if (fillMethod === 'value') {
-    const ta = editor as HTMLTextAreaElement;
-    const nativeInputValueSetter = getNativeSetter();
-    const current = ta.value;
-    const next = current ? current + '\n' + result : result;
-    if (nativeInputValueSetter) nativeInputValueSetter.call(ta, next);
-    else ta.value = next;
-    ta.dispatchEvent(new Event('input', { bubbles: true }));
+    if (location.hostname === 'arena.ai' && (location.pathname.startsWith('/text/direct') || location.pathname.startsWith('/c/'))) {
+      const ta = await fillArenaTextarea(result, editorSel, sendBtnSel);
+      if (!ta) return;
+    } else {
+      const ta = editor as HTMLTextAreaElement;
+      const current = ta.value;
+      const next = current ? current + '\n' + result : result;
+      applyTextareaValue(ta, next);
+    }
   } else if (fillMethod === 'prosemirror') {
     const current = editor.innerText.trim();
     editor.innerHTML = current ? current + '\n' + result : result;
@@ -568,11 +877,12 @@ async function fillAndSend(result: string, autoSend = false) {
     showCountdownToast(delay, () => {
       const checkAndClick = (attempts = 0) => {
         if (attempts > 50) {
-          const ed = querySelectorFirst(editorSel);
+          const ed = getCurrentEditor(editorSel);
           if (ed) ed.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
           return;
         }
-        const sendBtn = querySelectorFirst(sendBtnSel);
+        const currentEditor = getCurrentEditor(editorSel);
+        const sendBtn = currentEditor ? getSendButtonForEditor(currentEditor, sendBtnSel) : querySelectorFirst(sendBtnSel);
         if (sendBtn) {
           sendBtn.click();
         } else {
@@ -811,6 +1121,8 @@ function replaceTokenInEditor(el: HTMLElement, token: string, replacement: strin
 }
 
 function attachInputListener(editorEl: HTMLElement) {
+  if ((editorEl as any).__openlinkInputBound) return;
+  (editorEl as any).__openlinkInputBound = true;
   const { fillMethod } = getSiteConfig();
   let destroyPicker: (() => void) | null = null;
   let inputVersion = 0;
@@ -870,3 +1182,16 @@ function attachInputListener(editorEl: HTMLElement) {
   });
 }
 
+function mountInputListener() {
+  const { editor: editorSel } = getSiteConfig();
+
+  const attachCurrent = () => {
+    const editorEl = getCurrentEditor(editorSel);
+    if (editorEl) attachInputListener(editorEl);
+  };
+
+  attachCurrent();
+
+  const obs = new MutationObserver(() => attachCurrent());
+  obs.observe(document.body, { childList: true, subtree: true });
+}
