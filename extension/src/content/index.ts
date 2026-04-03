@@ -67,6 +67,8 @@ function getSiteConfig(): SiteConfig {
     return { editor: 'div.ql-editor[contenteditable="true"]', sendBtn: 'button.send-button[aria-label*="发送"], button.send-button[aria-label*="Send"]', stopBtn: null, fillMethod: 'execCommand', useObserver: true, responseSelector: 'model-response, .model-response-text, message-content' };
   if (h === 'arena.ai' && (p.startsWith('/text/direct') || p.startsWith('/c/')))
     return { editor: 'textarea[name="message"][placeholder*="Ask followup"], textarea[name="message"], form textarea, textarea', sendBtn: 'form button[type="submit"]:not([disabled]), form button[type="submit"]', stopBtn: null, fillMethod: 'value', useObserver: true, responseSelector: '.prose' };
+  if (h === 'chat.deepseek.com')
+    return { editor: 'textarea[placeholder*="DeepSeek"], textarea', sendBtn: 'div.bf38813a div[role="button"][aria-disabled], div[role="button"][aria-disabled]', stopBtn: null, fillMethod: 'value', useObserver: true, responseSelector: '.ds-message .ds-markdown' };
   // Default: AI Studio
   return { editor: 'textarea[placeholder*="Start typing a prompt"]', sendBtn: 'button.ctrl-enter-submits.ms-button-primary[type="submit"], button[aria-label*="Run"]', stopBtn: null, fillMethod: 'value', useObserver: true, responseSelector: 'ms-chat-turn' };
 }
@@ -124,8 +126,17 @@ function hashStr(s: string): number {
 }
 
 function getConversationId(): string {
-  const m = location.pathname.match(/\/chat\/([^/?#]+)/) || location.search.match(/[?&]id=([^&]+)/);
+  const m = location.pathname.match(/\/a\/chat\/s\/([^/?#]+)/) || location.pathname.match(/\/chat\/([^/?#]+)/) || location.search.match(/[?&]id=([^&]+)/);
   return m ? m[1] : '__default__';
+}
+
+function getSourceKey(sourceEl?: Element): string {
+  if (!sourceEl) return 'global';
+  const item = sourceEl.closest('[data-virtual-list-item-key]');
+  if (item) return (item.getAttribute('data-virtual-list-item-key') || 'item');
+  const message = sourceEl.closest('.ds-message, message-content, ms-chat-turn, .prose');
+  if (message) return `${message.tagName.toLowerCase()}:${hashStr((message.textContent || '').slice(0, 200))}`;
+  return `${sourceEl.tagName.toLowerCase()}:${hashStr((sourceEl.textContent || '').slice(0, 120))}`;
 }
 
 function isExecuted(key: string): boolean {
@@ -184,6 +195,17 @@ function getToolCardMount(sourceEl: Element): { anchor: Element; before: Element
     }
   }
 
+  if (location.hostname === 'chat.deepseek.com') {
+    const message = sourceEl.closest('[data-virtual-list-item-key]') ?? sourceEl.closest('.ds-message')?.parentElement;
+    if (message) {
+      const actionRow = Array.from(message.children).find((child) => {
+        if (!(child instanceof Element)) return false;
+        return !!child.querySelector('div[role="button"][aria-disabled]');
+      }) as Element | undefined;
+      return { anchor: message, before: actionRow ?? null };
+    }
+  }
+
   const messageContent = sourceEl.closest('message-content') ?? sourceEl.closest('.prose') ?? sourceEl;
   const anchor = messageContent.parentElement ?? sourceEl.parentElement;
   if (!anchor) return null;
@@ -209,6 +231,15 @@ function shouldRenderArenaToolText(text: string, sourceEl?: Element): boolean {
   if (sourceEl?.closest('pre, code')) return false;
   const toolOnly = text.replace(/<tool(?:\s[^>]*)?>[\s\S]*?<\/tool>/g, ' ').replace(/\s+/g, ' ').trim();
   return toolOnly.length <= 24;
+}
+
+function isDeepSeekAssistantResponse(el: Element | null): boolean {
+  if (!el || location.hostname !== 'chat.deepseek.com') return true;
+  const item = el.closest('[data-virtual-list-item-key]');
+  if (!item) return false;
+  if (!item.querySelector('.ds-message .ds-markdown')) return false;
+  if (item.querySelector('textarea')) return false;
+  return true;
 }
 
 function renderToolCard(data: any, _full: string, sourceEl: Element, key: string, processed: Set<string>) {
@@ -297,6 +328,7 @@ function startDOMObserver(responseSelector: string) {
   function scanText(text: string, sourceEl?: Element) {
     if (!text.includes('<tool')) return;
     if (sourceEl && !isArenaAssistantResponse(sourceEl)) return;
+    if (sourceEl && !isDeepSeekAssistantResponse(sourceEl)) return;
     if (!shouldRenderArenaToolText(text, sourceEl)) return;
     TOOL_RE.lastIndex = 0;
     let match;
@@ -306,7 +338,8 @@ function startDOMObserver(responseSelector: string) {
       const data = parseXmlToolCall(full) || tryParseToolJSON(inner);
       if (!data) { console.warn('[OpenLink] 工具调用解析失败:', full); continue; }
       const convId = getConversationId();
-      const key = data.callId ? `${convId}:${data.name}:${data.callId}` : String(hashStr(full));
+      const sourceKey = getSourceKey(sourceEl);
+      const key = data.callId ? `${convId}:${data.name}:${data.callId}` : `${convId}:${sourceKey}:${hashStr(full)}`;
       if (processed.has(key)) continue;
       console.log('[OpenLink] 提取到工具调用:', data);
 
@@ -344,7 +377,7 @@ function startDOMObserver(responseSelector: string) {
     while (el) {
       if (responseSelectors.some(sel => {
         try { return el!.matches(sel); } catch { return false; }
-      }) && isArenaAssistantResponse(el)) return el;
+      }) && isArenaAssistantResponse(el) && isDeepSeekAssistantResponse(el)) return el;
       el = el.parentElement;
     }
     return null;
@@ -426,6 +459,7 @@ function startDOMObserver(responseSelector: string) {
   requestAnimationFrame(() => {
     document.querySelectorAll(responseSelector).forEach(el => {
       if (!isArenaAssistantResponse(el)) return;
+      if (!isDeepSeekAssistantResponse(el)) return;
       scanText(getCleanText(el), el);
     });
   });
@@ -444,7 +478,6 @@ function injectFloatingButton(id: string, label: string, bottom: number, backgro
 
 function injectInitButton() {
   injectFloatingButton('openlink-init-btn', '🔗 初始化', 80, '#1677ff', sendInitPrompt);
-  injectFloatingButton('openlink-test-btn', '🧪 插入TEST', 130, '#16a34a', () => fillAndSend('TEST', false));
 }
 
 function removeDebugPanel() {
@@ -476,11 +509,23 @@ function elementSnapshot(el: Element | null) {
   };
 }
 
+function getEditorRegion(editor: Element | null): Element | null {
+  if (!editor) return null;
+  return editor.closest('form') ?? editor.parentElement?.parentElement ?? editor.parentElement ?? null;
+}
+
+function getNearbyButtons(editor: Element | null): Element[] {
+  const region = getEditorRegion(editor);
+  if (!region) return [];
+  return Array.from(region.querySelectorAll('button, [role="button"]')).slice(0, 12);
+}
+
 function collectDebugData() {
   const cfg = getSiteConfig();
   const editorCandidates = getEditorCandidates(cfg.editor);
   const visibleTextareas = getVisibleTextareas();
   const currentEditor = getCurrentEditor(cfg.editor);
+  const editorRegion = getEditorRegion(currentEditor);
   const sendButtons = Array.from(document.querySelectorAll(cfg.sendBtn.split(',').map(s => s.trim()).filter(Boolean).join(',')));
   const responseNodes = cfg.responseSelector ? Array.from(document.querySelectorAll(cfg.responseSelector)).slice(-3) : [];
   const toolNodes = Array.from(document.querySelectorAll('.prose, message-content, ms-chat-turn'))
@@ -492,11 +537,13 @@ function collectDebugData() {
     siteConfig: cfg,
     activeElement: elementSnapshot(document.activeElement as Element | null),
     currentEditor: elementSnapshot(currentEditor),
+    editorRegion: elementSnapshot(editorRegion),
     visibleTextareaCount: visibleTextareas.length,
     editorCandidateCount: editorCandidates.length,
     visibleTextareas: visibleTextareas.map((el) => elementSnapshot(el)),
     editorCandidates: editorCandidates.map((el) => elementSnapshot(el)),
     sendButtons: sendButtons.map((el) => elementSnapshot(el)),
+    nearbyButtons: getNearbyButtons(currentEditor).map((el) => elementSnapshot(el)),
     latestResponses: responseNodes.map((el) => elementSnapshot(el)),
     latestToolContainers: toolNodes.map((el) => elementSnapshot(el)),
   };
@@ -544,6 +591,17 @@ function injectDebugPanel() {
     {
       label: '复制当前输入框 HTML',
       onClick: () => copyText((collectDebugData().currentEditor?.outerHTML) || ''),
+    },
+    {
+      label: '复制当前输入区 HTML',
+      onClick: () => copyText((collectDebugData().editorRegion?.outerHTML) || ''),
+    },
+    {
+      label: '复制候选发送按钮 HTML',
+      onClick: () => {
+        const html = collectDebugData().nearbyButtons.map((item) => item?.outerHTML || '').join('\n\n');
+        void copyText(html);
+      },
     },
     {
       label: '复制最近回复 HTML',
@@ -776,6 +834,16 @@ function getCurrentEditor(editorSel: string): HTMLElement | null {
 }
 
 function getSendButtonForEditor(editor: HTMLElement, sendBtnSel: string): HTMLElement | null {
+  if (location.hostname === 'chat.deepseek.com') {
+    const region = getEditorRegion(editor);
+    if (region) {
+      const buttons = Array.from(region.querySelectorAll<HTMLElement>('div[role="button"][aria-disabled]'));
+      const enabled = buttons.find((btn) => btn.getAttribute('aria-disabled') === 'false' && isVisibleElement(btn));
+      if (enabled) return enabled;
+      const fallback = buttons.find((btn) => isVisibleElement(btn));
+      if (fallback) return fallback;
+    }
+  }
   const form = editor.closest('form');
   if (form) {
     for (const sel of sendBtnSel.split(',').map(s => s.trim()).filter(Boolean)) {
@@ -798,7 +866,7 @@ function applyTextareaValue(ta: HTMLTextAreaElement, next: string): void {
   ta.dispatchEvent(new Event('focus', { bubbles: true }));
   ta.dispatchEvent(new Event('input', { bubbles: true }));
   ta.dispatchEvent(new Event('change', { bubbles: true }));
-  ta.dispatchEvent(new Event('blur', { bubbles: true }));
+  if (location.hostname !== 'chat.deepseek.com') ta.dispatchEvent(new Event('blur', { bubbles: true }));
   ta.dispatchEvent(new KeyboardEvent('keyup', { key: 'End', code: 'End', bubbles: true }));
 }
 
