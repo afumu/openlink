@@ -1,0 +1,225 @@
+{
+  "capturedAt": "2026-04-03T15:56:55.336Z",
+  "location": {
+    "href": "https://chat.deepseek.com/",
+    "hostname": "chat.deepseek.com",
+    "pathname": "/"
+  },
+  "siteConfig": {
+    "editor": "textarea, div[contenteditable=\"true\"]",
+    "sendBtn": "button[type=\"submit\"], button",
+    "stopBtn": null,
+    "fillMethod": "paste",
+    "useObserver": false
+  },
+  "activeElement": {
+    "tag": "button",
+    "id": "",
+    "className": "",
+    "name": "",
+    "placeholder": "",
+    "type": "button",
+    "ariaLabel": "",
+    "readOnly": false,
+    "disabled": false,
+    "value": "",
+    "text": "复制调试 JSON",
+    "rect": {
+      "top": 478.203125,
+      "left": 1669,
+      "width": 220,
+      "height": 35
+    },
+    "outerHTML": "<button type=\"button\" style=\"display: block; width: 100%; margin-top: 6px; padding: 7px 10px; background: rgb(31, 41, 55); color: rgb(249, 250, 251); border: 1px solid rgb(75, 85, 99); border-radius: 8px; cursor: pointer; text-align: left;\">复制调试 JSON</button>"
+  },
+  "currentEditor": {
+    "tag": "textarea",
+    "id": "",
+    "className": "_27c9245 ds-scroll-area ds-scroll-area--show-on-focus-within d96f2d2a",
+    "name": "",
+    "placeholder": "给 DeepSeek 发送消息 ",
+    "type": "",
+    "ariaLabel": "",
+    "readOnly": false,
+    "disabled": false,
+    "value": "我来测试发送消息",
+    "text": "",
+    "rect": {
+      "top": 366,
+      "left": 703.5,
+      "width": 774,
+      "height": 62
+    },
+    "outerHTML": "<textarea class=\"_27c9245 ds-scroll-area ds-scroll-area--show-on-focus-within d96f2d2a\" placeholder=\"给 DeepSeek 发送消息 \" rows=\"2\">我来测试发送消息</textarea>"
+  },
+  "visibleTextareaCount": 1,
+  "editorCandidateCount": 1,
+  "visibleTextareas": [
+    {
+      "tag": "textarea",
+      "id": "",
+      "className": "_27c9245 ds-scroll-area ds-scroll-area--show-on-focus-within d96f2d2a",
+      "name": "",
+      "placeholder": "给 DeepSeek 发送消息 ",
+      "type": "",
+      "ariaLabel": "",
+      "readOnly": false,
+      "disabled": false,
+      "value": "我来测试发送消息",
+      "text": "",
+      "rect": {
+        "top": 366,
+        "left": 703.5,
+        "width": 774,
+        "height": 62
+      },
+      "outerHTML": "<textarea class=\"_27c9245 ds-scroll-area ds-scroll-area--show-on-focus-within d96f2d2a\" placeholder=\"给 DeepSeek 发送消息 \" rows=\"2\">我来测试发送消息</textarea>"
+    }
+  ],
+  "editorCandidates": [
+    {
+      "tag": "textarea",
+      "id": "",
+      "className": "_27c9245 ds-scroll-area ds-scroll-area--show-on-focus-within d96f2d2a",
+      "name": "",
+      "placeholder": "给 DeepSeek 发送消息 ",
+      "type": "",
+      "ariaLabel": "",
+      "readOnly": false,
+      "disabled": false,
+      "value": "我来测试发送消息",
+      "text": "",
+      "rect": {
+        "top": 366,
+        "left": 703.5,
+        "width": 774,
+        "height": 62
+      },
+      "outerHTML": "<textarea class=\"_27c9245 ds-scroll-area ds-scroll-area--show-on-focus-within d96f2d2a\" placeholder=\"给 DeepSeek 发送消息 \" rows=\"2\">我来测试发送消息</textarea>"
+    }
+  ],
+  "sendButtons": [
+    {
+      "tag": "button",
+      "id": "openlink-init-btn",
+      "className": "",
+      "name": "",
+      "placeholder": "",
+      "type": "button",
+      "ariaLabel": "",
+      "readOnly": false,
+      "disabled": false,
+      "value": "",
+      "text": "🔗 初始化",
+      "rect": {
+        "top": 735,
+        "left": 1813.375,
+        "width": 86.625,
+        "height": 37
+      },
+      "outerHTML": "<button id=\"openlink-init-btn\" type=\"button\" style=\"position: fixed; bottom: 80px; right: 20px; z-index: 99999; padding: 8px 14px; background: rgb(22, 119, 255); color: rgb(255, 255, 255); border: none; border-radius: 20px; cursor: pointer; font-size: 13px; box-shadow: rgba(0, 0, 0, 0.3) 0px 2px 8px;\">🔗 初始化</button>"
+    },
+    {
+      "tag": "button",
+      "id": "openlink-test-btn",
+      "className": "",
+      "name": "",
+      "placeholder": "",
+      "type": "button",
+      "ariaLabel": "",
+      "readOnly": false,
+      "disabled": false,
+      "value": "",
+      "text": "🧪 插入TEST",
+      "rect": {
+        "top": 685,
+        "left": 1793.15625,
+        "width": 106.84375,
+        "height": 37
+      },
+      "outerHTML": "<button id=\"openlink-test-btn\" type=\"button\" style=\"position: fixed; bottom: 130px; right: 20px; z-index: 99999; padding: 8px 14px; background: rgb(22, 163, 74); color: rgb(255, 255, 255); border: none; border-radius: 20px; cursor: pointer; font-size: 13px; box-shadow: rgba(0, 0, 0, 0.3) 0px 2px 8px;\">🧪 插入TEST</button>"
+    },
+    {
+      "tag": "button",
+      "id": "",
+      "className": "",
+      "name": "",
+      "placeholder": "",
+      "type": "button",
+      "ariaLabel": "",
+      "readOnly": false,
+      "disabled": false,
+      "value": "",
+      "text": "复制调试 JSON",
+      "rect": {
+        "top": 478.203125,
+        "left": 1669,
+        "width": 220,
+        "height": 35
+      },
+      "outerHTML": "<button type=\"button\" style=\"display: block; width: 100%; margin-top: 6px; padding: 7px 10px; background: rgb(31, 41, 55); color: rgb(249, 250, 251); border: 1px solid rgb(75, 85, 99); border-radius: 8px; cursor: pointer; text-align: left;\">复制调试 JSON</button>"
+    },
+    {
+      "tag": "button",
+      "id": "",
+      "className": "",
+      "name": "",
+      "placeholder": "",
+      "type": "button",
+      "ariaLabel": "",
+      "readOnly": false,
+      "disabled": false,
+      "value": "",
+      "text": "下载调试 JSON",
+      "rect": {
+        "top": 519.203125,
+        "left": 1669,
+        "width": 220,
+        "height": 35
+      },
+      "outerHTML": "<button type=\"button\" style=\"display: block; width: 100%; margin-top: 6px; padding: 7px 10px; background: rgb(31, 41, 55); color: rgb(249, 250, 251); border: 1px solid rgb(75, 85, 99); border-radius: 8px; cursor: pointer; text-align: left;\">下载调试 JSON</button>"
+    },
+    {
+      "tag": "button",
+      "id": "",
+      "className": "",
+      "name": "",
+      "placeholder": "",
+      "type": "button",
+      "ariaLabel": "",
+      "readOnly": false,
+      "disabled": false,
+      "value": "",
+      "text": "复制当前输入框 HTML",
+      "rect": {
+        "top": 560.203125,
+        "left": 1669,
+        "width": 220,
+        "height": 35
+      },
+      "outerHTML": "<button type=\"button\" style=\"display: block; width: 100%; margin-top: 6px; padding: 7px 10px; background: rgb(31, 41, 55); color: rgb(249, 250, 251); border: 1px solid rgb(75, 85, 99); border-radius: 8px; cursor: pointer; text-align: left;\">复制当前输入框 HTML</button>"
+    },
+    {
+      "tag": "button",
+      "id": "",
+      "className": "",
+      "name": "",
+      "placeholder": "",
+      "type": "button",
+      "ariaLabel": "",
+      "readOnly": false,
+      "disabled": false,
+      "value": "",
+      "text": "复制最近回复 HTML",
+      "rect": {
+        "top": 601.203125,
+        "left": 1669,
+        "width": 220,
+        "height": 35
+      },
+      "outerHTML": "<button type=\"button\" style=\"display: block; width: 100%; margin-top: 6px; padding: 7px 10px; background: rgb(31, 41, 55); color: rgb(249, 250, 251); border: 1px solid rgb(75, 85, 99); border-radius: 8px; cursor: pointer; text-align: left;\">复制最近回复 HTML</button>"
+    }
+  ],
+  "latestResponses": [],
+  "latestToolContainers": []
+}

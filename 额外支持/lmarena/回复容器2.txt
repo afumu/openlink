@@ -1,0 +1,13 @@
+<div class="prose prose-sm prose-pre:bg-transparent prose-pre:p-0 text-wrap break-words"><p>我可以使用以下工具：</p><ul>
+<li>exec_cmd：执行 shell 命令</li>
+<li>list_dir：列出目录内容</li>
+<li>read_file：读取文件（支持分页）</li>
+<li>write_file：写入/追加文件</li>
+<li>glob：按模式搜索文件</li>
+<li>grep：正则搜索代码</li>
+<li>edit：精确替换文本</li>
+<li>web_fetch：获取网页内容</li>
+<li>question：向你提问</li>
+<li>skill：加载技能（如 xiaohongshu-ops）</li>
+<li>todo_write：写入待办事项</li>
+</ul><p>需要我做什么？</p></div>

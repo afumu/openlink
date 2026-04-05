@@ -1,0 +1,166 @@
+{
+  "capturedAt": "2026-04-03T15:37:48.235Z",
+  "location": {
+    "href": "https://arena.ai/text/direct",
+    "hostname": "arena.ai",
+    "pathname": "/text/direct"
+  },
+  "siteConfig": {
+    "editor": "textarea[name=\"message\"][placeholder*=\"Ask followup\"], textarea[name=\"message\"], form textarea, textarea",
+    "sendBtn": "form button[type=\"submit\"]:not([disabled]), form button[type=\"submit\"]",
+    "stopBtn": null,
+    "fillMethod": "value",
+    "useObserver": true,
+    "responseSelector": ".prose"
+  },
+  "activeElement": {
+    "tag": "button",
+    "id": "",
+    "className": "",
+    "name": "",
+    "placeholder": "",
+    "type": "button",
+    "ariaLabel": "",
+    "readOnly": false,
+    "disabled": false,
+    "value": "",
+    "text": "下载调试 JSON",
+    "rect": {
+      "top": 319.203125,
+      "left": 1691,
+      "width": 198,
+      "height": 34
+    },
+    "outerHTML": "<button type=\"button\" style=\"display: block; width: 100%; margin-top: 6px; padding: 7px 10px; background: rgb(31, 41, 55); color: rgb(249, 250, 251); border: 1px solid rgb(75, 85, 99); border-radius: 8px; cursor: pointer; text-align: left;\">下载调试 JSON</button>"
+  },
+  "currentEditor": {
+    "tag": "textarea",
+    "id": "",
+    "className": "box-border w-full flex-none resize-none focus:outline-none active:outline-none placeholder:text-text-placeholder bg-surface-secondary max-h-[40vh] p-1 md:p-3",
+    "name": "message",
+    "placeholder": "Ask anything…",
+    "type": "",
+    "ariaLabel": "",
+    "readOnly": false,
+    "disabled": false,
+    "value": "",
+    "text": "",
+    "rect": {
+      "top": 321.5,
+      "left": 705,
+      "width": 750,
+      "height": 72
+    },
+    "outerHTML": "<textarea rows=\"2\" class=\"box-border w-full flex-none resize-none focus:outline-none active:outline-none placeholder:text-text-placeholder bg-surface-secondary max-h-[40vh] p-1 md:p-3\" name=\"message\" autofocus=\"\" autocomplete=\"off\" placeholder=\"Ask anything…\" style=\"height: 72px !important;\"></textarea>"
+  },
+  "visibleTextareaCount": 1,
+  "editorCandidateCount": 3,
+  "visibleTextareas": [
+    {
+      "tag": "textarea",
+      "id": "",
+      "className": "box-border w-full flex-none resize-none focus:outline-none active:outline-none placeholder:text-text-placeholder bg-surface-secondary max-h-[40vh] p-1 md:p-3",
+      "name": "message",
+      "placeholder": "Ask anything…",
+      "type": "",
+      "ariaLabel": "",
+      "readOnly": false,
+      "disabled": false,
+      "value": "",
+      "text": "",
+      "rect": {
+        "top": 321.5,
+        "left": 705,
+        "width": 750,
+        "height": 72
+      },
+      "outerHTML": "<textarea rows=\"2\" class=\"box-border w-full flex-none resize-none focus:outline-none active:outline-none placeholder:text-text-placeholder bg-surface-secondary max-h-[40vh] p-1 md:p-3\" name=\"message\" autofocus=\"\" autocomplete=\"off\" placeholder=\"Ask anything…\" style=\"height: 72px !important;\"></textarea>"
+    }
+  ],
+  "editorCandidates": [
+    {
+      "tag": "textarea",
+      "id": "",
+      "className": "box-border w-full flex-none resize-none focus:outline-none active:outline-none placeholder:text-text-placeholder bg-surface-secondary max-h-[40vh] p-1 md:p-3",
+      "name": "message",
+      "placeholder": "Ask anything…",
+      "type": "",
+      "ariaLabel": "",
+      "readOnly": false,
+      "disabled": false,
+      "value": "",
+      "text": "",
+      "rect": {
+        "top": 321.5,
+        "left": 705,
+        "width": 750,
+        "height": 72
+      },
+      "outerHTML": "<textarea rows=\"2\" class=\"box-border w-full flex-none resize-none focus:outline-none active:outline-none placeholder:text-text-placeholder bg-surface-secondary max-h-[40vh] p-1 md:p-3\" name=\"message\" autofocus=\"\" autocomplete=\"off\" placeholder=\"Ask anything…\" style=\"height: 72px !important;\"></textarea>"
+    },
+    {
+      "tag": "textarea",
+      "id": "",
+      "className": "box-border w-full flex-none resize-none focus:outline-none active:outline-none placeholder:text-text-placeholder bg-surface-secondary max-h-[40vh] p-1 md:p-3",
+      "name": "message",
+      "placeholder": "Ask anything…",
+      "type": "",
+      "ariaLabel": "",
+      "readOnly": false,
+      "disabled": false,
+      "value": "",
+      "text": "",
+      "rect": {
+        "top": 321.5,
+        "left": 705,
+        "width": 750,
+        "height": 72
+      },
+      "outerHTML": "<textarea rows=\"2\" class=\"box-border w-full flex-none resize-none focus:outline-none active:outline-none placeholder:text-text-placeholder bg-surface-secondary max-h-[40vh] p-1 md:p-3\" name=\"message\" autofocus=\"\" autocomplete=\"off\" placeholder=\"Ask anything…\" style=\"height: 72px !important;\"></textarea>"
+    },
+    {
+      "tag": "textarea",
+      "id": "",
+      "className": "box-border w-full flex-none resize-none focus:outline-none active:outline-none placeholder:text-text-placeholder bg-surface-secondary max-h-[40vh] p-1 md:p-3",
+      "name": "message",
+      "placeholder": "Ask anything…",
+      "type": "",
+      "ariaLabel": "",
+      "readOnly": false,
+      "disabled": false,
+      "value": "",
+      "text": "",
+      "rect": {
+        "top": 321.5,
+        "left": 705,
+        "width": 750,
+        "height": 72
+      },
+      "outerHTML": "<textarea rows=\"2\" class=\"box-border w-full flex-none resize-none focus:outline-none active:outline-none placeholder:text-text-placeholder bg-surface-secondary max-h-[40vh] p-1 md:p-3\" name=\"message\" autofocus=\"\" autocomplete=\"off\" placeholder=\"Ask anything…\" style=\"height: 72px !important;\"></textarea>"
+    }
+  ],
+  "sendButtons": [
+    {
+      "tag": "button",
+      "id": "",
+      "className": "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ring-offset-2 focus-visible:ring-offset-surface-primary disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 h-8 w-8 active:bg-interactive-cta-active opacity-50 pointer-events-none rounded-[4px] font-normal touch-hitbox border-border-medium text-interactive-active hover:bg-surface-raised border bg-transparent",
+      "name": "",
+      "placeholder": "",
+      "type": "submit",
+      "ariaLabel": "",
+      "readOnly": false,
+      "disabled": true,
+      "value": "",
+      "text": "",
+      "rect": {
+        "top": 401.5,
+        "left": 1423,
+        "width": 32,
+        "height": 32
+      },
+      "outerHTML": "<button class=\"inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ring-offset-2 focus-visible:ring-offset-surface-primary disabled:pointer-events-none disabled:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg]:shrink-0 h-8 w-8 active:bg-interactive-cta-active opacity-50 pointer-events-none rounded-[4px] font-normal touch-hitbox border-border-medium text-interactive-active hover:bg-surface-raised border bg-transparent\" disabled=\"\" type=\"submit\"><svg width=\"1.5em\" height=\"1.5em\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" color=\"currentColor\" class=\"size-4\"><path d=\"M3 12L21 12M21 12L12.5 3.5M21 12L12.5 20.5\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg></button>"
+    }
+  ],
+  "latestResponses": [],
+  "latestToolContainers": []
+}
