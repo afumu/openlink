@@ -14,6 +14,7 @@ import (
 
 type imageJob struct {
 	ID              string
+	SiteID          string
 	MediaKind       string
 	Prompt          string
 	Model           string
@@ -56,13 +57,17 @@ func newImageJobBridge(rootDir, token string) *imageJobBridge {
 	}
 }
 
-func (b *imageJobBridge) enqueueAndWait(ctx context.Context, mediaKind, prompt, model, size, responseFormat string, references []imageJobReference) (*imageJob, *imageJobResult, error) {
+func (b *imageJobBridge) enqueue(siteID, mediaKind, prompt, model, size, responseFormat string, references []imageJobReference) (*imageJob, chan *imageJobResult) {
 	id := fmt.Sprintf("img_%d_%d", time.Now().Unix(), b.idCounter.Add(1))
 	if strings.TrimSpace(mediaKind) == "" {
 		mediaKind = "image"
 	}
+	if strings.TrimSpace(siteID) == "" {
+		siteID = "labsfx"
+	}
 	job := &imageJob{
 		ID:              id,
+		SiteID:          siteID,
 		MediaKind:       mediaKind,
 		Prompt:          prompt,
 		Model:           model,
@@ -77,6 +82,11 @@ func (b *imageJobBridge) enqueueAndWait(ctx context.Context, mediaKind, prompt, 
 	b.pending = append(b.pending, job)
 	b.waiters[job.ID] = ch
 	b.mu.Unlock()
+	return job, ch
+}
+
+func (b *imageJobBridge) enqueueAndWait(ctx context.Context, siteID, mediaKind, prompt, model, size, responseFormat string, references []imageJobReference) (*imageJob, *imageJobResult, error) {
+	job, ch := b.enqueue(siteID, mediaKind, prompt, model, size, responseFormat, references)
 
 	select {
 	case result := <-ch:
@@ -99,6 +109,23 @@ func (b *imageJobBridge) enqueueAndWait(ctx context.Context, mediaKind, prompt, 
 	}
 }
 
+func (b *imageJobBridge) jobStage(jobID string) string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	for _, pending := range b.pending {
+		if pending.ID == jobID {
+			return "queued"
+		}
+	}
+	if _, ok := b.inflight[jobID]; ok {
+		return "in_progress"
+	}
+	if _, ok := b.waiters[jobID]; ok {
+		return "queued"
+	}
+	return "completed"
+}
+
 func cloneImageJobReferences(items []imageJobReference) []imageJobReference {
 	if len(items) == 0 {
 		return nil
@@ -115,16 +142,21 @@ func cloneImageJobReferences(items []imageJobReference) []imageJobReference {
 	return cloned
 }
 
-func (b *imageJobBridge) nextJob() *imageJob {
+func (b *imageJobBridge) nextJob(siteID string) *imageJob {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if len(b.pending) == 0 {
 		return nil
 	}
-	job := b.pending[0]
-	b.pending = b.pending[1:]
-	b.inflight[job.ID] = job
-	return job
+	for i, job := range b.pending {
+		if siteID != "" && job.SiteID != "" && job.SiteID != siteID {
+			continue
+		}
+		b.pending = append(b.pending[:i], b.pending[i+1:]...)
+		b.inflight[job.ID] = job
+		return job
+	}
+	return nil
 }
 
 func (b *imageJobBridge) complete(jobID, originalName, mimeType string, data []byte) (*imageJobResult, error) {

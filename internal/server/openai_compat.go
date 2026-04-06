@@ -24,6 +24,9 @@ var openAIModelCatalog = []openAIModelInfo{
 	{ID: "labs-google-fx-image", Object: "model", OwnedBy: "openlink", Description: "Alias of labs-google-fx for image generation"},
 	{ID: "labs-google-fx-video", Object: "model", OwnedBy: "openlink", Description: "Google Labs Flow video generation via browser automation"},
 	{ID: "labs-google-fx-veo", Object: "model", OwnedBy: "openlink", Description: "Alias of labs-google-fx-video for video generation"},
+	{ID: "gemini-2.0-flash-preview-image-generation", Object: "model", OwnedBy: "openlink", Description: "Gemini image generation via browser automation"},
+	{ID: "gemini-2.5-flash-image-preview", Object: "model", OwnedBy: "openlink", Description: "Gemini image generation via browser automation"},
+	{ID: "gemini-image", Object: "model", OwnedBy: "openlink", Description: "Alias of Gemini browser image generation"},
 }
 
 var markdownImageURLRe = regexp.MustCompile(`!\[[^\]]*\]\(([^)\s]+)`)
@@ -74,18 +77,11 @@ func (s *Server) handleOpenAIChatCompletions(c *gin.Context) {
 		return
 	}
 
-	job, result, err := s.imageJobBridge.enqueueAndWait(ctx, mediaKind, prompt, model, "", "url", referenceImages)
-	if err != nil {
-		c.JSON(http.StatusGatewayTimeout, gin.H{"error": fmt.Sprintf("%s generation timed out", mediaKind), "details": err.Error()})
-		return
-	}
-
-	mediaURL := buildGeneratedAssetURL(c, result.StoredRelPath, s.config.Token)
-	content := buildOpenAIMediaContent(mediaKind, mediaURL)
 	created := time.Now().Unix()
 	completionID := fmt.Sprintf("chatcmpl-%d", created)
 
 	if req.Stream {
+		job, waiter := s.imageJobBridge.enqueue(openAIModelSite(model), mediaKind, prompt, model, "", "url", referenceImages)
 		c.Header("Content-Type", "text/event-stream")
 		c.Header("Cache-Control", "no-cache")
 		c.Header("Connection", "keep-alive")
@@ -104,26 +100,88 @@ func (s *Server) handleOpenAIChatCompletions(c *gin.Context) {
 				"finish_reason": nil,
 			}},
 		}
-		chunk2 := gin.H{
-			"id":      completionID,
-			"object":  "chat.completion.chunk",
-			"created": created,
-			"model":   model,
-			"choices": []gin.H{{
-				"index": 0,
-				"delta": gin.H{
-					"content": content,
-				},
-				"finish_reason": "stop",
-			}},
+		writeSSEJSON(c, chunk1)
+
+		statusTextForStage := func(stage string) string {
+			switch stage {
+			case "queued":
+				return fmt.Sprintf("[openlink] %s 任务已排队，等待浏览器接单...\n\n", mediaKind)
+			case "in_progress":
+				return fmt.Sprintf("[openlink] %s 正在生成中，请稍候...\n\n", mediaKind)
+			case "completed":
+				return fmt.Sprintf("[openlink] %s 已生成完成，正在返回结果...\n\n", mediaKind)
+			default:
+				return fmt.Sprintf("[openlink] %s 状态同步中...\n\n", mediaKind)
+			}
+		}
+		writeStatusChunk := func(text string, finishReason interface{}) {
+			writeSSEJSON(c, gin.H{
+				"id":      completionID,
+				"object":  "chat.completion.chunk",
+				"created": created,
+				"model":   model,
+				"choices": []gin.H{{
+					"index": 0,
+					"delta": gin.H{
+						"content": text,
+					},
+					"finish_reason": finishReason,
+				}},
+			})
 		}
 
-		writeSSEJSON(c, chunk1)
-		writeSSEJSON(c, chunk2)
-		_, _ = c.Writer.Write([]byte("data: [DONE]\n\n"))
-		c.Writer.Flush()
+		lastStage := ""
+		ticker := time.NewTicker(1500 * time.Millisecond)
+		defer ticker.Stop()
+		for {
+			stage := s.imageJobBridge.jobStage(job.ID)
+			if stage != lastStage && stage != "" && stage != "completed" {
+				writeStatusChunk(statusTextForStage(stage), nil)
+				lastStage = stage
+			}
+
+			select {
+			case result := <-waiter:
+				if result == nil {
+					writeStatusChunk(fmt.Sprintf("[openlink] %s 生成失败。\n\n", mediaKind), "stop")
+					_, _ = c.Writer.Write([]byte("data: [DONE]\n\n"))
+					c.Writer.Flush()
+					return
+				}
+				if lastStage != "completed" {
+					writeStatusChunk(statusTextForStage("completed"), nil)
+				}
+				mediaURL := buildGeneratedAssetURL(c, result.StoredRelPath, s.config.Token)
+				content := buildOpenAIMediaContent(mediaKind, mediaURL)
+				writeStatusChunk(content, "stop")
+				_, _ = c.Writer.Write([]byte("data: [DONE]\n\n"))
+				c.Writer.Flush()
+				return
+			case <-ticker.C:
+				stage = s.imageJobBridge.jobStage(job.ID)
+				if stage != lastStage && stage != "" && stage != "completed" {
+					writeStatusChunk(statusTextForStage(stage), nil)
+					lastStage = stage
+				}
+			case <-ctx.Done():
+				c.SSEvent("error", gin.H{"error": fmt.Sprintf("%s generation timed out", mediaKind)})
+				_, _ = c.Writer.Write([]byte("data: [DONE]\n\n"))
+				c.Writer.Flush()
+				return
+			case <-c.Request.Context().Done():
+				return
+			}
+		}
+	}
+
+	job, result, err := s.imageJobBridge.enqueueAndWait(ctx, openAIModelSite(model), mediaKind, prompt, model, "", "url", referenceImages)
+	if err != nil {
+		c.JSON(http.StatusGatewayTimeout, gin.H{"error": fmt.Sprintf("%s generation timed out", mediaKind), "details": err.Error()})
 		return
 	}
+
+	mediaURL := buildGeneratedAssetURL(c, result.StoredRelPath, s.config.Token)
+	content := buildOpenAIMediaContent(mediaKind, mediaURL)
 
 	c.JSON(http.StatusOK, gin.H{
 		"id":      completionID,
@@ -310,6 +368,8 @@ func normalizeOpenAIModel(model string) string {
 		return "labs-google-fx"
 	case "labs-google-fx-veo":
 		return "labs-google-fx-video"
+	case "gemini-image":
+		return "gemini-2.0-flash-preview-image-generation"
 	default:
 		return model
 	}
@@ -321,6 +381,14 @@ func openAIModelKind(model string) string {
 		return "video"
 	}
 	return "image"
+}
+
+func openAIModelSite(model string) string {
+	normalized := strings.ToLower(strings.TrimSpace(model))
+	if strings.Contains(normalized, "gemini") {
+		return "gemini"
+	}
+	return "labsfx"
 }
 
 func buildOpenAIMediaContent(mediaKind, mediaURL string) string {

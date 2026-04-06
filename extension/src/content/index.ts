@@ -438,6 +438,8 @@ let labsFxAPIHeaders: Record<string, string> = {};
 let labsFxProjectId = '';
 let labsFxReferencesInjectedReady = false;
 let labsFxGeneratePatchedSeq = 0;
+let geminiLatestMediaURLs: string[] = [];
+let geminiMediaSeq = 0;
 
 function formatDebugValue(value: unknown): string {
   if (value == null) return '';
@@ -464,10 +466,11 @@ if (!(window as any).__OPENLINK_LOADED__) {
   (window as any).__OPENLINK_LOADED__ = true;
 
   const cfg = getSiteConfig();
+  const adapter = getSiteAdapter();
   let debugMode = false;
-  debugLog('内容脚本已加载', { adapter: getSiteAdapter().id, href: location.href });
+  debugLog('内容脚本已加载', { adapter: adapter.id, href: location.href });
 
-  if (!cfg.useObserver) {
+  if (!cfg.useObserver || adapter.id === 'gemini') {
     const script = document.createElement('script');
     script.src = chrome.runtime.getURL('injected.js');
     (document.head || document.documentElement).appendChild(script);
@@ -481,6 +484,11 @@ if (!(window as any).__OPENLINK_LOADED__) {
   window.addEventListener('message', (event) => {
     if (event.data.type === 'TOOL_CALL') {
       execQueue = execQueue.then(() => executeToolCall(event.data.data));
+    } else if (event.data.type === 'OPENLINK_DEBUG_LOG') {
+      const payload = event.data.data || {};
+      const source = typeof payload.source === 'string' && payload.source ? payload.source : 'injected';
+      const message = typeof payload.message === 'string' && payload.message ? payload.message : '调试日志';
+      debugLog(`[${source}] ${message}`, payload.meta || {});
     } else if (event.data.type === 'OPENLINK_FLOW_CONTEXT') {
       const payload = event.data.data || {};
       const headers = payload.headers && typeof payload.headers === 'object' ? payload.headers : {};
@@ -509,6 +517,14 @@ if (!(window as any).__OPENLINK_LOADED__) {
       debugLog('labsfx 已将参考图注入生成请求', {
         count: event.data.data?.count || 0,
         mediaKind: event.data.data?.mediaKind || 'image',
+      });
+    } else if (event.data.type === 'OPENLINK_GEMINI_MEDIA_FOUND') {
+      geminiLatestMediaURLs = Array.isArray(event.data.data?.urls) ? event.data.data.urls : [];
+      geminiMediaSeq = Number(event.data.data?.seq || (geminiMediaSeq + 1));
+      debugLog('gemini 已捕获无水印媒体 URL', {
+        seq: geminiMediaSeq,
+        count: geminiLatestMediaURLs.length,
+        first: geminiLatestMediaURLs[0] || '',
       });
     }
   });
@@ -543,6 +559,9 @@ if (!(window as any).__OPENLINK_LOADED__) {
   if (location.hostname === 'labs.google' && location.pathname.startsWith('/fx')) {
     if (document.body) startLabsFxImageWorker();
     else document.addEventListener('DOMContentLoaded', startLabsFxImageWorker);
+  } else if (location.hostname.includes('gemini.google.com')) {
+    if (document.body) startGeminiImageWorker();
+    else document.addEventListener('DOMContentLoaded', startGeminiImageWorker);
   }
 }
 
@@ -1038,7 +1057,7 @@ function startLabsFxImageWorker() {
         return;
       }
       const headers: Record<string, string> = { Authorization: `Bearer ${authToken}` };
-      const resp = await bgFetch(`${apiUrl}/bridge/image-jobs/next`, { headers });
+      const resp = await bgFetch(`${apiUrl}/bridge/image-jobs/next?site_id=labsfx`, { headers });
       if (!resp.ok) {
         debugLog('labsfx 拉取任务失败', { status: resp.status });
         return;
@@ -1143,6 +1162,179 @@ async function runLabsFxMediaJob(job: any, apiUrl: string, authToken: string) {
   if (!resultResp.ok) throw new Error(`${mediaKind} result upload failed: HTTP ${resultResp.status}`);
   debugLog(`labsfx ${mediaKind === 'video' ? '视频' : '图片'}结果回传成功`, { fileName, status: resultResp.status });
   showToast(`${mediaKind === 'video' ? '视频' : '图片'}已保存: ${fileName}`, 3500);
+}
+
+function startGeminiImageWorker() {
+  let running = false;
+  debugLog('gemini 图片 worker 已启动');
+
+  const tick = async () => {
+    if (running) return;
+    running = true;
+    try {
+      const { authToken, apiUrl } = await chrome.storage.local.get(['authToken', 'apiUrl']);
+      if (!authToken || !apiUrl) {
+        debugLog('gemini 跳过轮询，缺少配置', { hasAuthToken: !!authToken, hasApiUrl: !!apiUrl });
+        return;
+      }
+      const headers: Record<string, string> = { Authorization: `Bearer ${authToken}` };
+      const resp = await bgFetch(`${apiUrl}/bridge/image-jobs/next?site_id=gemini`, { headers });
+      if (!resp.ok) {
+        debugLog('gemini 拉取任务失败', { status: resp.status });
+        return;
+      }
+      const payload = JSON.parse(resp.body || '{}');
+      const job = payload.job;
+      if (!job?.id || !job?.prompt) return;
+      debugLog('gemini 收到媒体任务', {
+        id: job.id,
+        mediaKind: job.media_kind || 'image',
+        prompt: String(job.prompt).slice(0, 120),
+      });
+      try {
+        await runGeminiImageJob(job, apiUrl, authToken);
+      } catch (err) {
+        debugLog('gemini 任务执行失败，准备回传错误', { id: job.id, error: err instanceof Error ? err.message : String(err) });
+        await bgFetch(`${apiUrl}/bridge/image-jobs/${encodeURIComponent(job.id)}/result`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ error: err instanceof Error ? err.message : String(err) }),
+        });
+        throw err;
+      }
+    } catch (err) {
+      console.warn('[OpenLink] gemini image worker error:', err);
+      debugLog('gemini worker 异常', err instanceof Error ? err.message : String(err));
+    } finally {
+      running = false;
+    }
+  };
+
+  void tick();
+  window.setInterval(() => { void tick(); }, 2500);
+}
+
+async function runGeminiImageJob(job: any, apiUrl: string, authToken: string) {
+  window.postMessage({ type: 'OPENLINK_SET_GEMINI_MEDIA_CAPTURE', data: { active: true } }, '*');
+  try {
+    showToast(`Gemini 开始生成图片: ${job.id}`, 2500);
+    debugLog('gemini 开始执行图片任务', { id: job.id });
+    const editor = await waitForElement<HTMLElement>('div.ql-editor[contenteditable="true"]', 20000);
+    debugLog('gemini 已定位输入框');
+    const beforeKeys = getGeminiImageKeys();
+    const beforeMediaSeq = geminiMediaSeq;
+    debugLog('gemini 提交前图片 key 集合', beforeKeys);
+    await setGeminiPrompt(editor, String(job.prompt));
+    debugLog('gemini Prompt 已写入', { prompt: String(job.prompt).slice(0, 120), editorText: getEditorText(editor).slice(0, 120) });
+    const sendBtn = getSendButtonForEditor(editor, getSiteConfig().sendBtn);
+    if (!sendBtn) throw new Error('gemini send button not found');
+    debugLog('gemini 已定位发送按钮', { text: (sendBtn.textContent || '').trim().slice(0, 60) });
+    await clickElementLikeUser(sendBtn);
+    debugLog('gemini 已触发发送按钮点击');
+
+    const imageEl = await waitForNewGeminiImage(beforeKeys, 180000);
+    const imageSrc = imageEl.getAttribute('src');
+    if (!imageSrc) throw new Error('gemini generated image src missing');
+    debugLog('gemini 检测到新图片', { src: imageSrc });
+
+    debugLog('gemini 新图已出现，继续等待无水印原图 URL', { previousSeq: beforeMediaSeq, timeoutMs: 120000 });
+    const originalURL = await waitForGeminiOriginalMediaURL(beforeMediaSeq, 120000).catch(() => '');
+    let base64: string;
+    let mimeType: string;
+    let sourceURL: string;
+    if (originalURL) {
+      debugLog('gemini 使用无水印原图 URL', { url: originalURL });
+      const originalMediaResp = await fetchGeminiOriginalImageWithRetry(originalURL);
+      sourceURL = originalMediaResp.finalUrl || originalURL;
+      base64 = originalMediaResp.bodyBase64;
+      mimeType = originalMediaResp.contentType || 'image/png';
+    } else {
+      debugLog('gemini 等待无水印原图 URL 超时，回退页面 blob 图片', { src: imageSrc });
+      sourceURL = new URL(imageSrc, location.href).toString();
+      const blob = await fetch(sourceURL).then(async (r) => {
+        if (!r.ok) throw new Error(`gemini image fetch failed: HTTP ${r.status}`);
+        return r.blob();
+      });
+      base64 = await blobToBase64(blob);
+      mimeType = blob.type || 'image/png';
+    }
+    const fileName = `${job.id}${guessMediaExtension(mimeType, sourceURL)}`;
+
+    const resultResp = await bgFetch(`${apiUrl}/bridge/image-jobs/${encodeURIComponent(job.id)}/result`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        file_name: fileName,
+        mime_type: mimeType,
+        data: base64,
+      }),
+    });
+    if (!resultResp.ok) throw new Error(`gemini image result upload failed: HTTP ${resultResp.status}`);
+    debugLog('gemini 图片结果回传成功', { fileName, status: resultResp.status });
+    showToast(`Gemini 图片已保存: ${fileName}`, 3500);
+  } finally {
+    window.postMessage({ type: 'OPENLINK_SET_GEMINI_MEDIA_CAPTURE', data: { active: false } }, '*');
+  }
+}
+
+async function fetchGeminiOriginalImageWithRetry(originalURL: string): Promise<{ bodyBase64: string; contentType: string; finalUrl: string }> {
+  const maxAttempts = 3;
+  let lastError = 'unknown error';
+  const strategies = [
+    {
+      name: 'omit',
+      options: {
+        credentials: 'omit',
+        redirect: 'follow',
+        referrer: 'https://gemini.google.com/',
+        referrerPolicy: 'no-referrer-when-downgrade',
+      },
+    },
+    {
+      name: 'include',
+      options: {
+        credentials: 'include',
+        redirect: 'follow',
+        referrer: 'https://gemini.google.com/',
+        referrerPolicy: 'no-referrer-when-downgrade',
+      },
+    },
+  ] as const;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    if (attempt > 1) {
+      const delayMs = 1200 * attempt;
+      debugLog('gemini 无水印原图抓取重试等待', { attempt, delayMs, url: originalURL });
+      await sleep(delayMs);
+    }
+    for (const strategy of strategies) {
+      const mediaResp = await bgFetchBinary(originalURL, strategy.options);
+      if (mediaResp.ok && mediaResp.bodyBase64) {
+        debugLog('gemini 无水印原图抓取成功', {
+          attempt,
+          strategy: strategy.name,
+          status: mediaResp.status,
+          url: originalURL,
+          finalUrl: mediaResp.finalUrl,
+          contentType: mediaResp.contentType,
+        });
+        return mediaResp;
+      }
+      lastError = `HTTP ${mediaResp.status}${mediaResp.error ? ` ${mediaResp.error}` : ''}`;
+      debugLog('gemini 无水印原图抓取失败', {
+        attempt,
+        strategy: strategy.name,
+        url: originalURL,
+        error: lastError,
+      });
+    }
+  }
+  throw new Error(`gemini original image fetch failed after retry: ${lastError}`);
 }
 
 async function clickElementLikeUser(el: HTMLElement) {
@@ -1642,6 +1834,20 @@ function getLabsFxNewMediaTile(previousKeys: Set<string>, mediaKind: 'image' | '
   return null;
 }
 
+function getLabsFxUnexpectedNewMediaKind(previousKeys: Set<string>, expectedKind: 'image' | 'video'): 'image' | 'video' | null {
+  const otherKind = expectedKind === 'video' ? 'image' : 'video';
+  for (const tile of getLabsFxVisibleResourceTiles()) {
+    const media = otherKind === 'video'
+      ? tile.querySelector('video')
+      : tile.querySelector('img[alt="生成的图片"]');
+    if (!media) continue;
+    const key = tile.getAttribute('data-tile-id') || media.getAttribute('src') || '';
+    if (!key || previousKeys.has(key)) continue;
+    return otherKind;
+  }
+  return null;
+}
+
 function getLabsFxVisibleResourceTiles(): HTMLElement[] {
   const seen = new Set<string>();
   const tiles: HTMLElement[] = [];
@@ -1716,6 +1922,13 @@ async function waitForNewLabsFxGeneratedMedia(
       }
       return found.media;
     }
+    const unexpectedKind = getLabsFxUnexpectedNewMediaKind(previousKeys, mediaKind);
+    if (unexpectedKind) {
+      debugLog(`labsfx 检测到非预期新${unexpectedKind === 'video' ? '视频' : '图片'}`, {
+        expected: mediaKind,
+        actual: unexpectedKind,
+      });
+    }
     await sleep(1000);
   }
   debugLog(`labsfx 等待新${mediaKind === 'video' ? '视频' : '图片'}超时`, { previousKeys: Array.from(previousKeys), timeoutMs, currentKeys: getLabsFxTileKeys() });
@@ -1732,30 +1945,36 @@ function getLabsFxModeButton(editor: HTMLElement): HTMLElement | null {
 }
 
 async function ensureLabsFxMode(editor: HTMLElement, mediaKind: 'image' | 'video') {
-  if (mediaKind !== 'video') return;
   const modeBtn = getLabsFxModeButton(editor);
   if (!modeBtn) return;
   const currentText = (modeBtn.textContent || '').trim();
-  if (currentText.includes('视频')) {
+  const isVideoMode = currentText.includes('视频');
+  if (mediaKind === 'video' && isVideoMode) {
     debugLog('labsfx 当前已处于视频模式');
     return;
   }
-  debugLog('labsfx 尝试切换到视频模式', { currentText: currentText.slice(0, 80) });
+  if (mediaKind === 'image' && !isVideoMode) {
+    debugLog('labsfx 当前已处于图片模式', { currentText: currentText.slice(0, 80) });
+    return;
+  }
+
+  debugLog(`labsfx 尝试切换到${mediaKind === 'video' ? '视频' : '图片'}模式`, { currentText: currentText.slice(0, 80) });
   await clickElementLikeUser(modeBtn);
   await sleep(300);
 
   const candidates = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"], [role="option"], button, div')).filter((el) => {
     if (!isVisibleElement(el)) return false;
     const text = (el.textContent || '').trim();
-    return text === '视频' || text.startsWith('视频');
+    if (mediaKind === 'video') return text === '视频' || text.startsWith('视频');
+    return text === '图片' || text.startsWith('图片') || text.includes('Nano Banana');
   });
   if (candidates[0]) {
     await clickElementLikeUser(candidates[0]);
     await sleep(400);
-    debugLog('labsfx 已切换到视频模式');
+    debugLog(`labsfx 已切换到${mediaKind === 'video' ? '视频' : '图片'}模式`);
     return;
   }
-  debugLog('labsfx 未找到视频模式菜单项，继续使用当前模式');
+  debugLog(`labsfx 未找到${mediaKind === 'video' ? '视频' : '图片'}模式菜单项，继续使用当前模式`);
 }
 
 async function waitForElement<T extends Element>(selector: string, timeoutMs: number): Promise<T> {
@@ -1770,6 +1989,31 @@ async function waitForElement<T extends Element>(selector: string, timeoutMs: nu
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function setGeminiPrompt(editor: HTMLElement, text: string) {
+  editor.focus();
+  const selection = window.getSelection();
+  if (selection) {
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+  try { document.execCommand('delete', false); } catch {}
+  await sleep(80);
+  editor.focus();
+  try {
+    document.execCommand('insertText', false, text);
+  } catch {}
+  editor.dispatchEvent(new Event('input', { bubbles: true }));
+  editor.dispatchEvent(new Event('change', { bubbles: true }));
+  await sleep(120);
+  if (!getEditorText(editor).includes(text.trim())) {
+    editor.textContent = text;
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+    editor.dispatchEvent(new Event('change', { bubbles: true }));
+  }
 }
 
 async function blobToBase64(blob: Blob): Promise<string> {
@@ -1800,6 +2044,69 @@ function guessMediaExtension(mimeType: string, src: string): string {
   const videoMatch = src.match(/\.(mp4|webm|mov|m4v)(?:$|\?)/i);
   if (videoMatch) return `.${videoMatch[1].toLowerCase()}`;
   return guessImageExtension(mimeType, src);
+}
+
+function getLatestGeminiImageResponseContainer(): Element | null {
+  const messageContents = Array.from(document.querySelectorAll('message-content'));
+  for (let i = messageContents.length - 1; i >= 0; i--) {
+    const message = messageContents[i];
+    if (message.querySelector('.attachment-container.generated-images img.image')) return message;
+  }
+  return null;
+}
+
+function getGeminiGeneratedImageElements(): HTMLImageElement[] {
+  const latestMessage = getLatestGeminiImageResponseContainer();
+  if (!latestMessage) return [];
+  return Array.from(latestMessage.querySelectorAll<HTMLImageElement>('generated-image img.image.loaded, .attachment-container.generated-images img.image.loaded'))
+    .filter((img) => isVisibleElement(img) && !!img.getAttribute('src'));
+}
+
+function getGeminiImageKeys(): string[] {
+  return getGeminiGeneratedImageElements()
+    .map((img) => img.getAttribute('src') || '')
+    .filter(Boolean);
+}
+
+async function waitForGeminiOriginalMediaURL(previousSeq: number, timeoutMs: number): Promise<string> {
+  const deadline = Date.now() + timeoutMs;
+  debugLog('gemini 等待无水印原图 URL', { previousSeq, timeoutMs });
+  while (Date.now() < deadline) {
+    if (geminiMediaSeq > previousSeq && geminiLatestMediaURLs.length > 0) {
+      const url = geminiLatestMediaURLs[geminiLatestMediaURLs.length - 1];
+      if (url) return url;
+    }
+    await sleep(500);
+  }
+  throw new Error('wait for gemini original media url timed out');
+}
+
+async function waitForNewGeminiImage(previousKeysInput: string[] | Set<string>, timeoutMs: number): Promise<HTMLImageElement> {
+  const deadline = Date.now() + timeoutMs;
+  const previousKeys = previousKeysInput instanceof Set ? previousKeysInput : new Set(previousKeysInput);
+  debugLog('gemini 等待新图片', { previousKeys: Array.from(previousKeys), timeoutMs });
+  let lastSeenKeys = '';
+  while (Date.now() < deadline) {
+    const currentKeys = getGeminiImageKeys();
+    const currentKeySummary = currentKeys.join(',');
+    if (currentKeySummary !== lastSeenKeys) {
+      lastSeenKeys = currentKeySummary;
+      debugLog('gemini 当前图片 key', currentKeys);
+    }
+    const images = getGeminiGeneratedImageElements();
+    for (let i = images.length - 1; i >= 0; i--) {
+      const img = images[i];
+      const key = img.getAttribute('src') || '';
+      if (!key || previousKeys.has(key)) continue;
+      if (key.startsWith('blob:') || (img.complete && img.naturalWidth > 0)) {
+        debugLog('gemini 新图片已就绪', { key, width: img.naturalWidth, height: img.naturalHeight });
+        return img;
+      }
+    }
+    await sleep(1000);
+  }
+  debugLog('gemini 等待新图片超时', { previousKeys: Array.from(previousKeys), timeoutMs, currentKeys: getGeminiImageKeys() });
+  throw new Error('wait for gemini generated image timed out');
 }
 
 async function sendInitPrompt() {

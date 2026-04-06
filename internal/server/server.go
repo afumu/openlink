@@ -292,7 +292,7 @@ func (s *Server) handleOpenAIImageGeneration(c *gin.Context) {
 		return
 	}
 
-	job, result, err := s.imageJobBridge.enqueueAndWait(ctx, "image", req.Prompt, model, req.Size, req.ResponseFormat, referenceImages)
+	job, result, err := s.imageJobBridge.enqueueAndWait(ctx, openAIModelSite(model), "image", req.Prompt, model, req.Size, req.ResponseFormat, referenceImages)
 	if err != nil {
 		c.JSON(http.StatusGatewayTimeout, gin.H{"error": "image generation timed out", "details": err.Error()})
 		return
@@ -314,7 +314,7 @@ func (s *Server) handleOpenAIImageGeneration(c *gin.Context) {
 }
 
 func (s *Server) openAITimeout() time.Duration {
-	const minOpenAITimeout = 5 * time.Minute
+	const minOpenAITimeout = 10 * time.Minute
 	cfgTimeout := time.Duration(s.config.Timeout) * time.Second
 	if cfgTimeout < minOpenAITimeout {
 		return minOpenAITimeout
@@ -323,7 +323,7 @@ func (s *Server) openAITimeout() time.Duration {
 }
 
 func (s *Server) openAIVideoTimeout() time.Duration {
-	const minOpenAIVideoTimeout = 25 * time.Minute
+	const minOpenAIVideoTimeout = 10 * time.Minute
 	cfgTimeout := time.Duration(s.config.Timeout) * time.Second
 	if cfgTimeout < minOpenAIVideoTimeout {
 		return minOpenAIVideoTimeout
@@ -339,7 +339,8 @@ func (s *Server) openAITimeoutForKind(mediaKind string) time.Duration {
 }
 
 func (s *Server) handleImageJobNext(c *gin.Context) {
-	job := s.imageJobBridge.nextJob()
+	siteID := strings.TrimSpace(c.Query("site_id"))
+	job := s.imageJobBridge.nextJob(siteID)
 	if job == nil {
 		c.JSON(http.StatusOK, gin.H{"job": nil})
 		return
@@ -347,6 +348,7 @@ func (s *Server) handleImageJobNext(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"job": gin.H{
 			"id":              job.ID,
+			"site_id":         job.SiteID,
 			"media_kind":      job.MediaKind,
 			"prompt":          job.Prompt,
 			"model":           job.Model,
@@ -396,8 +398,8 @@ func (s *Server) handleImageJobResult(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"ok":   true,
-		"path": result.StoredRelPath,
+		"ok":         true,
+		"path":       result.StoredRelPath,
 		"media_kind": result.MediaKind,
 	})
 }

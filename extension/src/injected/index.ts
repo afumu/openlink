@@ -42,9 +42,12 @@ function tryParseToolJSON(raw: string): any | null {
 (function() {
   console.log('[OpenLink] 插件已加载');
   const originalFetch = window.fetch;
+  const OriginalXHR = window.XMLHttpRequest;
   let buffer = '';
   let pendingFlowReferenceInputs = [];
   let pendingFlowReferenceKind = 'image';
+  let geminiMediaSeq = 0;
+  let geminiMediaCaptureActive = false;
 
   // Global dedup: keyed by conversation ID extracted from URL
   const processedByConv = new Map<string, Set<string>>();
@@ -377,6 +380,145 @@ function tryParseToolJSON(raw: string): any | null {
     } catch {}
   }
 
+  function parseGeminiInnerJSON(raw: string) {
+    try { return JSON.parse(raw); } catch {}
+    return null;
+  }
+
+  function extractGeminiGeneratedMedia(data: any): string[] {
+    const mediaUrls: string[] = [];
+    if (Array.isArray(data)) {
+      if (
+        data.length >= 1 &&
+        Array.isArray(data[0]) && data[0].length >= 4 &&
+        data[0][0] === null &&
+        typeof data[0][1] === 'number' &&
+        typeof data[0][2] === 'string' &&
+        typeof data[0][3] === 'string' &&
+        data[0][3].startsWith('https://') &&
+        data[0][3].includes('gg-dl/')
+      ) {
+        let secondUrl = null;
+        if (
+          data.length >= 4 &&
+          Array.isArray(data[3]) && data[3].length >= 4 &&
+          data[3][0] === null &&
+          typeof data[3][3] === 'string' &&
+          data[3][3].includes('gg-dl/')
+        ) {
+          secondUrl = data[3][3];
+        }
+        const url = secondUrl || data[0][3];
+        if (!url.includes('image_generation_content') && !url.includes('video_gen_chip')) {
+          return [url];
+        }
+      }
+
+      if (
+        data.length >= 4 &&
+        data[0] === null &&
+        typeof data[1] === 'number' &&
+        typeof data[2] === 'string' &&
+        typeof data[3] === 'string' &&
+        data[3].startsWith('https://') &&
+        data[3].includes('gg-dl/')
+      ) {
+        const url = data[3];
+        if (!url.includes('image_generation_content') && !url.includes('video_gen_chip')) {
+          return [url];
+        }
+      }
+
+      const allFound: string[] = [];
+      for (const item of data) {
+        const found = extractGeminiGeneratedMedia(item);
+        if (found.length) allFound.push(...found);
+      }
+      if (allFound.length) {
+        const unique = [...new Set(allFound)];
+        return unique.length ? [unique[unique.length - 1]] : [];
+      }
+    } else if (data && typeof data === 'object') {
+      const allFound: string[] = [];
+      for (const value of Object.values(data)) {
+        const found = extractGeminiGeneratedMedia(value);
+        if (found.length) allFound.push(...found);
+      }
+      if (allFound.length) return allFound;
+    }
+    return mediaUrls;
+  }
+
+  function optimizeGeminiMediaURL(url: string): string {
+    if (!url) return url;
+    let next = url.replace(/\\u003d/g, '=').replace(/\\u0026/g, '&');
+    if ((next.includes('googleusercontent.com') || next.includes('ggpht.com')) && !/\.(mp4|webm|mov)(?:$|\?)/i.test(next)) {
+      next = next.replace(/=w\d+(-h\d+)?(-[a-zA-Z]+)*$/i, '=s0');
+      next = next.replace(/=s\d+(-[a-zA-Z]+)*$/i, '=s0');
+      next = next.replace(/=h\d+(-[a-zA-Z]+)*$/i, '=s0');
+      if (!next.endsWith('=s0') && !next.split('/').pop()?.includes('=')) next += '=s0';
+    }
+    return next;
+  }
+
+  function extractGeminiMediaFromResponseText(text: string): string[] {
+    const urls: string[] = [];
+    for (const line of text.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || !trimmed.includes('"wrb.fr"')) continue;
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (!Array.isArray(parsed)) continue;
+        for (const item of parsed) {
+          if (!Array.isArray(item) || item[0] !== 'wrb.fr' || typeof item[2] !== 'string') continue;
+          const inner = parseGeminiInnerJSON(item[2]);
+          if (!inner) continue;
+          const found = extractGeminiGeneratedMedia(inner);
+          if (found.length) urls.push(...found);
+        }
+      } catch {}
+    }
+    return [...new Set(urls.map(optimizeGeminiMediaURL).filter(Boolean))];
+  }
+
+  function postGeminiMediaIfFound(url: string, text: string) {
+    if (!location.hostname.includes('gemini.google.com')) return;
+    if (!geminiMediaCaptureActive) return;
+    if (
+      !url.includes('BardFrontendService/StreamGenerate') &&
+      !url.includes('/_/BardChatUi/data/batchexecute') &&
+      !text.includes('"wrb.fr"') &&
+      !text.includes('gg-dl/')
+    ) return;
+    window.postMessage({
+      type: 'OPENLINK_DEBUG_LOG',
+      data: {
+        source: 'injected',
+        message: 'gemini 响应检测命中',
+        meta: { url: url.slice(0, 120), length: text.length, hasWrb: text.includes('"wrb.fr"'), hasGgdl: text.includes('gg-dl/') },
+      },
+    }, '*');
+    const urls = extractGeminiMediaFromResponseText(text);
+    if (!urls.length) {
+      window.postMessage({
+        type: 'OPENLINK_DEBUG_LOG',
+        data: {
+          source: 'injected',
+          message: 'gemini 响应中未提取到无水印 URL',
+          meta: { url: url.slice(0, 120) },
+        },
+      }, '*');
+      return;
+    }
+    window.postMessage({
+      type: 'OPENLINK_GEMINI_MEDIA_FOUND',
+      data: {
+        seq: ++geminiMediaSeq,
+        urls,
+      },
+    }, '*');
+  }
+
   window.addEventListener('message', (event) => {
     if (event.source !== window) return;
     if (event.data?.type === 'OPENLINK_SET_PENDING_FLOW_REFERENCES') {
@@ -389,6 +531,9 @@ function tryParseToolJSON(raw: string): any | null {
           mediaKind: pendingFlowReferenceKind,
         },
       }, '*');
+    } else if (event.data?.type === 'OPENLINK_SET_GEMINI_MEDIA_CAPTURE') {
+      geminiMediaCaptureActive = !!event.data?.data?.active;
+      if (!geminiMediaCaptureActive) geminiMediaSeq = 0;
     }
   });
 
@@ -399,7 +544,9 @@ function tryParseToolJSON(raw: string): any | null {
       nextArgs = await patchFlowGenerateArgs(nextArgs);
       captureFlowRequest(nextArgs);
       const response = await originalFetch.apply(this, nextArgs);
+      const requestURL = getRequestURL(nextArgs[0]);
       const reader = response.body!.getReader();
+      let responseTextBuffer = '';
       const stream = new ReadableStream({
         async start(controller) {
           while (true) {
@@ -407,6 +554,7 @@ function tryParseToolJSON(raw: string): any | null {
             if (done) { buffer = ''; break; }
 
             const text = decoder.decode(value, { stream: true });
+            responseTextBuffer += text;
             buffer += text;
 
             let match;
@@ -422,6 +570,7 @@ function tryParseToolJSON(raw: string): any | null {
               }
               buffer = buffer.replace(full, '');
             }
+            postGeminiMediaIfFound(requestURL, responseTextBuffer);
             controller.enqueue(value);
           }
           controller.close();
@@ -434,4 +583,29 @@ function tryParseToolJSON(raw: string): any | null {
       });
     });
   };
+
+  function patchXHR() {
+    const originalOpen = OriginalXHR.prototype.open;
+    const originalSend = OriginalXHR.prototype.send;
+
+    OriginalXHR.prototype.open = function(method, url, ...rest) {
+      this.__openlink_url = typeof url === 'string' ? url : String(url);
+      return originalOpen.call(this, method, url, ...rest);
+    };
+
+    OriginalXHR.prototype.send = function(...args) {
+      this.addEventListener('readystatechange', function() {
+        try {
+          if (this.readyState !== 4) return;
+          const url = this.__openlink_url || '';
+          const text = typeof this.responseText === 'string' ? this.responseText : '';
+          if (!text) return;
+          postGeminiMediaIfFound(url, text);
+        } catch {}
+      });
+      return originalSend.apply(this, args);
+    };
+  }
+
+  patchXHR();
 })();
