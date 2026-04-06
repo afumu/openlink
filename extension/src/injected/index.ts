@@ -44,6 +44,7 @@ function tryParseToolJSON(raw: string): any | null {
   const originalFetch = window.fetch;
   let buffer = '';
   let pendingFlowReferenceInputs = [];
+  let pendingFlowReferenceKind = 'image';
 
   // Global dedup: keyed by conversation ID extracted from URL
   const processedByConv = new Map<string, Set<string>>();
@@ -131,6 +132,20 @@ function tryParseToolJSON(raw: string): any | null {
       .filter(Boolean);
   }
 
+  function buildPendingFlowVideoReferenceInputs(items) {
+    if (!Array.isArray(items)) return [];
+    return items
+      .map((item) => {
+        const mediaId = typeof item?.mediaId === 'string' ? item.mediaId.trim() : '';
+        if (!mediaId) return null;
+        return {
+          mediaId,
+          imageUsageType: 'IMAGE_USAGE_TYPE_ASSET',
+        };
+      })
+      .filter(Boolean);
+  }
+
   function mergeFlowReferenceInputs(payload) {
     if (!payload || typeof payload !== 'object') return payload;
     const merged = { ...payload };
@@ -146,8 +161,35 @@ function tryParseToolJSON(raw: string): any | null {
     return merged;
   }
 
+  function ensureStructuredVideoTextInput(request) {
+    if (!request || typeof request !== 'object') return request;
+    const next = { ...request };
+    const textInput = next.textInput && typeof next.textInput === 'object' ? { ...next.textInput } : {};
+    const prompt = typeof textInput.prompt === 'string' ? textInput.prompt : '';
+    if (!textInput.structuredPrompt && prompt) {
+      textInput.structuredPrompt = { parts: [{ text: prompt }] };
+      delete textInput.prompt;
+    }
+    next.textInput = textInput;
+    return next;
+  }
+
+  function ensureVideoGenerationContext(payload) {
+    if (!payload || typeof payload !== 'object') return payload;
+    const next = { ...payload };
+    next.useV2ModelConfig = true;
+    const mediaGenerationContext = next.mediaGenerationContext && typeof next.mediaGenerationContext === 'object'
+      ? { ...next.mediaGenerationContext }
+      : {};
+    if (!mediaGenerationContext.batchId && typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      mediaGenerationContext.batchId = crypto.randomUUID();
+    }
+    next.mediaGenerationContext = mediaGenerationContext;
+    return next;
+  }
+
   function patchFlowGenerateBody(bodyText) {
-    if (!bodyText || !pendingFlowReferenceInputs.length) return { bodyText, patched: false };
+    if (!bodyText || !pendingFlowReferenceInputs.length || pendingFlowReferenceKind !== 'image') return { bodyText, patched: false };
     try {
       const payload = JSON.parse(bodyText);
       if (Array.isArray(payload.requests)) {
@@ -168,28 +210,122 @@ function tryParseToolJSON(raw: string): any | null {
     }
   }
 
+  function patchFlowVideoGenerateBody(url, bodyText) {
+    if (!bodyText || !pendingFlowReferenceInputs.length || pendingFlowReferenceKind !== 'video') {
+      return { url, bodyText, patched: false };
+    }
+    try {
+      const payload = JSON.parse(bodyText);
+      const videoRefs = buildPendingFlowVideoReferenceInputs(pendingFlowReferenceInputs);
+      if (!videoRefs.length) return { url, bodyText, patched: false };
+
+      let nextURL = url;
+      if (videoRefs.length >= 2) {
+        nextURL = url.replace('/video:batchAsyncGenerateVideoText', '/video:batchAsyncGenerateVideoStartAndEndImage');
+        nextURL = nextURL.replace('/video:batchAsyncGenerateVideoReferenceImages', '/video:batchAsyncGenerateVideoStartAndEndImage');
+      } else if (videoRefs.length === 1) {
+        nextURL = url.replace('/video:batchAsyncGenerateVideoText', '/video:batchAsyncGenerateVideoReferenceImages');
+        nextURL = nextURL.replace('/video:batchAsyncGenerateVideoStartAndEndImage', '/video:batchAsyncGenerateVideoReferenceImages');
+      }
+
+      const patchRequest = (request) => {
+        let next = ensureStructuredVideoTextInput(request);
+        if (videoRefs.length >= 2) {
+          next = {
+            ...next,
+            startImage: { mediaId: videoRefs[0].mediaId },
+            endImage: { mediaId: videoRefs[1].mediaId },
+          };
+          delete next.referenceImages;
+        } else {
+          next = {
+            ...next,
+            referenceImages: videoRefs,
+          };
+          delete next.startImage;
+          delete next.endImage;
+        }
+        return next;
+      };
+
+      let nextPayload;
+      if (Array.isArray(payload.requests)) {
+        nextPayload = {
+          ...payload,
+          requests: payload.requests.map((request) => patchRequest(request)),
+        };
+      } else {
+        nextPayload = patchRequest(payload);
+      }
+      nextPayload = ensureVideoGenerationContext(nextPayload);
+
+      window.postMessage({
+        type: 'OPENLINK_FLOW_GENERATE_PATCHED',
+        data: {
+          count: pendingFlowReferenceInputs.length,
+          mediaKind: 'video',
+        },
+      }, '*');
+      pendingFlowReferenceInputs = [];
+      pendingFlowReferenceKind = 'image';
+      return { url: nextURL, bodyText: JSON.stringify(nextPayload), patched: true };
+    } catch {
+      return { url, bodyText, patched: false };
+    }
+  }
+
   async function patchFlowGenerateArgs(args) {
     const input = args[0];
     const init = args[1] || {};
     const url = getRequestURL(input);
-    if (!url.includes('/flowMedia:batchGenerateImages') || !pendingFlowReferenceInputs.length) {
+    const isImageGenerate = url.includes('/flowMedia:batchGenerateImages');
+    const isVideoGenerate =
+      url.includes('/video:batchAsyncGenerateVideoText') ||
+      url.includes('/video:batchAsyncGenerateVideoReferenceImages') ||
+      url.includes('/video:batchAsyncGenerateVideoStartAndEndImage');
+    if ((!isImageGenerate && !isVideoGenerate) || !pendingFlowReferenceInputs.length) {
       return args;
     }
 
     if (typeof init.body === 'string') {
-      const patched = patchFlowGenerateBody(init.body);
+      if (isImageGenerate) {
+        const patched = patchFlowGenerateBody(init.body);
+        if (!patched.patched) return args;
+        return [input, { ...init, body: patched.bodyText }];
+      }
+      const patched = patchFlowVideoGenerateBody(url, init.body);
       if (!patched.patched) return args;
-      return [input, { ...init, body: patched.bodyText }];
+      return [patched.url, { ...init, body: patched.bodyText }];
     }
 
     if (input instanceof Request) {
       try {
         const cloned = input.clone();
         const originalBody = await cloned.text();
-        const patched = patchFlowGenerateBody(originalBody);
+        if (isImageGenerate) {
+          const patched = patchFlowGenerateBody(originalBody);
+          if (!patched.patched) return args;
+          const headers = new Headers(input.headers);
+          const request = new Request(input.url, {
+            method: input.method,
+            headers,
+            body: patched.bodyText,
+            mode: input.mode,
+            credentials: input.credentials,
+            cache: input.cache,
+            redirect: input.redirect,
+            referrer: input.referrer,
+            referrerPolicy: input.referrerPolicy,
+            integrity: input.integrity,
+            keepalive: input.keepalive,
+            signal: input.signal,
+          });
+          return [request, init];
+        }
+        const patched = patchFlowVideoGenerateBody(url, originalBody);
         if (!patched.patched) return args;
         const headers = new Headers(input.headers);
-        const request = new Request(input.url, {
+        const request = new Request(patched.url, {
           method: input.method,
           headers,
           body: patched.bodyText,
@@ -245,10 +381,12 @@ function tryParseToolJSON(raw: string): any | null {
     if (event.source !== window) return;
     if (event.data?.type === 'OPENLINK_SET_PENDING_FLOW_REFERENCES') {
       pendingFlowReferenceInputs = normalizePendingFlowReferenceInputs(event.data?.data?.items);
+      pendingFlowReferenceKind = event.data?.data?.mediaKind === 'video' ? 'video' : 'image';
       window.postMessage({
         type: 'OPENLINK_FLOW_REFERENCES_READY',
         data: {
           count: pendingFlowReferenceInputs.length,
+          mediaKind: pendingFlowReferenceKind,
         },
       }, '*');
     }

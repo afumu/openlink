@@ -59,6 +59,8 @@ openlink
 
 访问 [Gemini](https://gemini.google.com)、[AI Studio](https://aistudio.google.com) 或 [LMArena / Arena](https://arena.ai/text/direct)，点击页面右下角的「🔗 初始化」按钮，AI 即可开始使用本地工具。
 
+如果你要使用 [Google Labs Flow](https://labs.google/fx) 的图片 / 视频生成能力，则不需要点击「🔗 初始化」。Flow 通过 OpenLink 提供的 OpenAI 兼容接口下发任务，由浏览器扩展在已登录的 Flow 页面中代为执行。
+
 ---
 
 ## 推荐平台
@@ -76,8 +78,76 @@ openlink
 | Google AI Studio | ✅ | 推荐，原生支持系统提示词 |
 | Google Gemini | ✅ | |
 | LMArena / Arena (`arena.ai`) | ✅ | 支持 `/text/direct` 和进入对话后的 `/c/...` 页面 |
+| Google Labs Flow (`labs.google/fx`) | ✅ | 支持图片 / 视频生成；通过 OpenAI 兼容接口调用；无需初始化 |
 
 > LMArena / Arena 目前通过对话消息注入提示词工作，兼容性和工具调用稳定性仍依赖具体模型与页面结构。
+
+> Flow 不是通过网页对话里的 `<tool>` 调用来工作的，而是由扩展在已打开的 Flow 页面里执行生成任务，所以不需要「初始化」步骤。
+
+## Flow 使用说明
+
+Flow 主要用于媒体生成，不用于本地工具调用。
+
+### 前置条件
+
+1. 启动本地 OpenLink 服务
+2. 加载最新版浏览器扩展
+3. 打开并登录 [Google Labs Flow](https://labs.google/fx)
+4. 保持 Flow 页面处于打开状态
+
+### 使用方式
+
+Flow 不需要点击右下角的「🔗 初始化」按钮。
+
+你可以直接通过 OpenLink 提供的 OpenAI 兼容接口发起生成请求：
+
+- `POST /v1/images/generations`
+- `POST /v1/chat/completions`
+
+其中：
+
+- `labs-google-fx` / `labs-google-fx-image` 用于图片生成
+- `labs-google-fx-video` / `labs-google-fx-veo` 用于视频生成
+
+### 图片生成示例
+
+```bash
+curl http://127.0.0.1:39527/v1/images/generations \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "labs-google-fx",
+    "prompt": "一只戴墨镜的橘猫，电影感，海报风格"
+  }'
+```
+
+### 视频生成示例
+
+```bash
+curl http://127.0.0.1:39527/v1/chat/completions \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "labs-google-fx-video",
+    "messages": [
+      {
+        "role": "user",
+        "content": "一只海龟飞出海面，电影感镜头"
+      }
+    ]
+  }'
+```
+
+### 参考图 / 首尾帧
+
+Flow 也支持基于图片生成：
+
+- 图片生成时可传 `image` / `images` / `reference_images`
+- 视频生成时可在 `chat/completions` 的用户消息中传 `image_url`
+- 传 1 张参考图时会走参考图视频
+- 传 2 张参考图时会走首尾帧视频
+
+生成完成后，媒体文件会保存到当前工作目录下的 `.openlink/generated/`，接口响应会返回 OpenLink 代理后的访问地址。
 
 ---
 

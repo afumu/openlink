@@ -437,6 +437,7 @@ const debugLogs: string[] = [];
 let labsFxAPIHeaders: Record<string, string> = {};
 let labsFxProjectId = '';
 let labsFxReferencesInjectedReady = false;
+let labsFxGeneratePatchedSeq = 0;
 
 function formatDebugValue(value: unknown): string {
   if (value == null) return '';
@@ -499,9 +500,16 @@ if (!(window as any).__OPENLINK_LOADED__) {
       }
     } else if (event.data.type === 'OPENLINK_FLOW_REFERENCES_READY') {
       labsFxReferencesInjectedReady = (event.data.data?.count || 0) > 0;
-      debugLog('labsfx 已下发待注入参考图', { count: event.data.data?.count || 0 });
+      debugLog('labsfx 已下发待注入参考图', {
+        count: event.data.data?.count || 0,
+        mediaKind: event.data.data?.mediaKind || 'image',
+      });
     } else if (event.data.type === 'OPENLINK_FLOW_GENERATE_PATCHED') {
-      debugLog('labsfx 已将参考图注入生成请求', { count: event.data.data?.count || 0 });
+      labsFxGeneratePatchedSeq += 1;
+      debugLog('labsfx 已将参考图注入生成请求', {
+        count: event.data.data?.count || 0,
+        mediaKind: event.data.data?.mediaKind || 'image',
+      });
     }
   });
 
@@ -1038,9 +1046,13 @@ function startLabsFxImageWorker() {
       const payload = JSON.parse(resp.body || '{}');
       const job = payload.job;
       if (!job?.id || !job?.prompt) return;
-      debugLog('labsfx 收到图片任务', { id: job.id, prompt: String(job.prompt).slice(0, 120) });
+      debugLog('labsfx 收到媒体任务', {
+        id: job.id,
+        mediaKind: job.media_kind || 'image',
+        prompt: String(job.prompt).slice(0, 120),
+      });
       try {
-        await runLabsFxImageJob(job, apiUrl, authToken);
+        await runLabsFxMediaJob(job, apiUrl, authToken);
       } catch (err) {
         debugLog('labsfx 任务执行失败，准备回传错误', { id: job.id, error: err instanceof Error ? err.message : String(err) });
         await bgFetch(`${apiUrl}/bridge/image-jobs/${encodeURIComponent(job.id)}/result`, {
@@ -1054,7 +1066,7 @@ function startLabsFxImageWorker() {
         throw err;
       }
     } catch (err) {
-      console.warn('[OpenLink] labs.google/fx image worker error:', err);
+      console.warn('[OpenLink] labs.google/fx media worker error:', err);
       debugLog('labsfx worker 异常', err instanceof Error ? err.message : String(err));
     } finally {
       running = false;
@@ -1065,42 +1077,55 @@ function startLabsFxImageWorker() {
   window.setInterval(() => { void tick(); }, 2500);
 }
 
-async function runLabsFxImageJob(job: any, apiUrl: string, authToken: string) {
-  showToast(`开始生成图片: ${job.id}`, 2500);
-  debugLog('labsfx 开始执行任务', { id: job.id });
+async function runLabsFxMediaJob(job: any, apiUrl: string, authToken: string) {
+  const mediaKind = job?.media_kind === 'video' ? 'video' : 'image';
+  showToast(`开始生成${mediaKind === 'video' ? '视频' : '图片'}: ${job.id}`, 2500);
+  debugLog('labsfx 开始执行任务', { id: job.id, mediaKind });
   const editor = await waitForElement<HTMLElement>('div[role="textbox"][data-slate-editor="true"][contenteditable="true"]', 20000);
   debugLog('labsfx 已定位输入框');
+  await ensureLabsFxMode(editor, mediaKind);
   const referenceImages = Array.isArray(job.reference_images) ? job.reference_images : [];
   await prepareLabsFxPromptArea(editor);
   if (referenceImages.length > 0) {
     debugLog('labsfx 开始附加参考图', { count: referenceImages.length });
-    await attachLabsFxReferenceImages(editor, referenceImages);
+    await attachLabsFxReferenceImages(editor, referenceImages, mediaKind);
     debugLog('labsfx 参考图附加完成', { count: getLabsFxReferenceCardCount(editor) });
   } else {
     debugLog('labsfx 本次任务无参考图');
   }
   await setLabsFxPrompt(editor, String(job.prompt));
   debugLog('labsfx Prompt 已写入', { prompt: String(job.prompt).slice(0, 120), editorText: getEditorText(editor).slice(0, 120) });
+  if (referenceImages.length > 0) {
+    refreshLabsFxComposerState(editor);
+    debugLog('labsfx 已触发输入区刷新以同步参考图状态', { mediaKind });
+    await sleep(180);
+  }
   await sleep(300);
   const beforeKeys = getLabsFxTileKeys();
-  debugLog('labsfx 提交前图片 key 集合', beforeKeys);
+  debugLog(`labsfx 提交前${mediaKind === 'video' ? '媒体' : '图片'} key 集合`, beforeKeys);
   const sendBtn = getSendButtonForEditor(editor, getSiteConfig().sendBtn);
   if (!sendBtn) throw new Error('labs.google/fx send button not found');
   debugLog('labsfx 已定位发送按钮', { text: (sendBtn.textContent || '').trim().slice(0, 60) });
+  const patchedSeqBeforeSend = labsFxGeneratePatchedSeq;
   await clickElementLikeUser(sendBtn);
   debugLog('labsfx 已触发发送按钮点击');
+  if (referenceImages.length > 0) {
+    if (!await waitForLabsFxGeneratePatched(patchedSeqBeforeSend, 8000)) {
+      throw new Error(`labs.google/fx ${mediaKind} generate request was not patched with reference images`);
+    }
+  }
 
-  const imageEl = await waitForNewLabsFxImage(beforeKeys, 180000);
-  const src = imageEl.getAttribute('src');
-  if (!src) throw new Error('generated image src missing');
-  debugLog('labsfx 检测到新图片', { src });
+  const mediaEl = await waitForNewLabsFxGeneratedMedia(mediaKind, beforeKeys, mediaKind === 'video' ? 25 * 60 * 1000 : 180000);
+  const src = mediaEl.getAttribute('src');
+  if (!src) throw new Error(`generated ${mediaKind} src missing`);
+  debugLog(`labsfx 检测到新${mediaKind === 'video' ? '视频' : '图片'}`, { src });
 
   const absoluteUrl = new URL(src, location.href).toString();
-  const imageResp = await bgFetchBinary(absoluteUrl, { credentials: 'include' });
-  if (!imageResp.ok || !imageResp.bodyBase64) throw new Error(`image fetch failed: HTTP ${imageResp.status}${imageResp.error ? ` ${imageResp.error}` : ''}`);
-  debugLog('labsfx 图片抓取成功', { status: imageResp.status, url: absoluteUrl, finalUrl: imageResp.finalUrl, contentType: imageResp.contentType });
-  const base64 = imageResp.bodyBase64;
-  const fileName = `${job.id}${guessImageExtension(imageResp.contentType || '', imageResp.finalUrl || absoluteUrl)}`;
+  const mediaResp = await bgFetchBinary(absoluteUrl, { credentials: 'include' });
+  if (!mediaResp.ok || !mediaResp.bodyBase64) throw new Error(`${mediaKind} fetch failed: HTTP ${mediaResp.status}${mediaResp.error ? ` ${mediaResp.error}` : ''}`);
+  debugLog(`labsfx ${mediaKind === 'video' ? '视频' : '图片'}抓取成功`, { status: mediaResp.status, url: absoluteUrl, finalUrl: mediaResp.finalUrl, contentType: mediaResp.contentType });
+  const base64 = mediaResp.bodyBase64;
+  const fileName = `${job.id}${guessMediaExtension(mediaResp.contentType || '', mediaResp.finalUrl || absoluteUrl)}`;
 
   const headers: Record<string, string> = {
     Authorization: `Bearer ${authToken}`,
@@ -1111,13 +1136,13 @@ async function runLabsFxImageJob(job: any, apiUrl: string, authToken: string) {
     headers,
     body: JSON.stringify({
       file_name: fileName,
-      mime_type: imageResp.contentType || 'image/png',
+      mime_type: mediaResp.contentType || (mediaKind === 'video' ? 'video/mp4' : 'image/png'),
       data: base64,
     }),
   });
-  if (!resultResp.ok) throw new Error(`image result upload failed: HTTP ${resultResp.status}`);
-  debugLog('labsfx 图片结果回传成功', { fileName, status: resultResp.status });
-  showToast(`图片已保存: ${fileName}`, 3500);
+  if (!resultResp.ok) throw new Error(`${mediaKind} result upload failed: HTTP ${resultResp.status}`);
+  debugLog(`labsfx ${mediaKind === 'video' ? '视频' : '图片'}结果回传成功`, { fileName, status: resultResp.status });
+  showToast(`${mediaKind === 'video' ? '视频' : '图片'}已保存: ${fileName}`, 3500);
 }
 
 async function clickElementLikeUser(el: HTMLElement) {
@@ -1301,11 +1326,12 @@ async function uploadLabsFxReferenceImageViaAPI(item: any, index: number): Promi
   return mediaId;
 }
 
-function setPendingLabsFxReferenceInputs(mediaIds: string[]) {
+function setPendingLabsFxReferenceInputs(mediaIds: string[], mediaKind: 'image' | 'video') {
   labsFxReferencesInjectedReady = false;
   window.postMessage({
     type: 'OPENLINK_SET_PENDING_FLOW_REFERENCES',
     data: {
+      mediaKind,
       items: mediaIds.map((mediaId) => ({ mediaId })),
     },
   }, '*');
@@ -1318,6 +1344,29 @@ async function waitForLabsFxPendingReferencesReady(timeoutMs: number): Promise<b
     await sleep(100);
   }
   return false;
+}
+
+async function waitForLabsFxGeneratePatched(previousSeq: number, timeoutMs: number): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (labsFxGeneratePatchedSeq > previousSeq) return true;
+    await sleep(100);
+  }
+  return false;
+}
+
+function refreshLabsFxComposerState(editor: HTMLElement) {
+  editor.focus();
+  placeCaretInLabsFxEditor(editor);
+  editor.dispatchEvent(new Event('focus', { bubbles: true }));
+  editor.dispatchEvent(new InputEvent('beforeinput', {
+    bubbles: true,
+    cancelable: true,
+    inputType: 'insertText',
+    data: '',
+  }));
+  editor.dispatchEvent(new Event('input', { bubbles: true }));
+  editor.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
 async function clearLabsFxReferenceImages(editor: HTMLElement) {
@@ -1448,7 +1497,7 @@ function dispatchLabsFxDropFile(target: HTMLElement, file: File) {
   }
 }
 
-async function attachLabsFxReferenceImages(editor: HTMLElement, items: any[]) {
+async function attachLabsFxReferenceImages(editor: HTMLElement, items: any[], mediaKind: 'image' | 'video' = 'image') {
   const target = (editor.closest('.sc-84e494b2-0') as HTMLElement | null) ?? editor;
   const uploadedMediaIds: string[] = [];
   for (let i = 0; i < items.length; i++) {
@@ -1491,11 +1540,14 @@ async function attachLabsFxReferenceImages(editor: HTMLElement, items: any[]) {
   }
 
   if (uploadedMediaIds.length > 0) {
-    debugLog('labsfx 准备注入已上传参考图到生成请求', { count: uploadedMediaIds.length });
-    setPendingLabsFxReferenceInputs(uploadedMediaIds);
+    debugLog('labsfx 准备注入已上传参考图到生成请求', { count: uploadedMediaIds.length, mediaKind });
+    setPendingLabsFxReferenceInputs(uploadedMediaIds, mediaKind);
     if (!await waitForLabsFxPendingReferencesReady(2000)) {
       throw new Error('labs.google/fx pending reference injection setup failed');
     }
+    refreshLabsFxComposerState(editor);
+    debugLog('labsfx 注入准备完成后已刷新输入区状态', { mediaKind });
+    await sleep(120);
   }
 }
 
@@ -1549,7 +1601,7 @@ function placeCaretInLabsFxEditor(editor: HTMLElement) {
 function getLatestLabsFxImageKey(): string {
   const tile = getLatestLabsFxTile();
   if (!tile) return '';
-  return tile.getAttribute('data-tile-id') || tile.querySelector('img[alt="生成的图片"]')?.getAttribute('src') || '';
+  return tile.getAttribute('data-tile-id') || tile.querySelector('img[alt="生成的图片"], video')?.getAttribute('src') || '';
 }
 
 function getLatestLabsFxImage(): HTMLImageElement | null {
@@ -1562,7 +1614,7 @@ function getLatestLabsFxTile(): HTMLElement | null {
 
 function getLabsFxTileKeys(): string[] {
   return getLabsFxVisibleResourceTiles()
-    .map((tile) => tile.getAttribute('data-tile-id') || tile.querySelector('img[alt="生成的图片"]')?.getAttribute('src') || '')
+    .map((tile) => tile.getAttribute('data-tile-id') || tile.querySelector('img[alt="生成的图片"], video')?.getAttribute('src') || '')
     .filter(Boolean);
 }
 
@@ -1577,13 +1629,27 @@ function getLabsFxNewTile(previousKeys: Set<string>): { tile: HTMLElement; key: 
   return null;
 }
 
+function getLabsFxNewMediaTile(previousKeys: Set<string>, mediaKind: 'image' | 'video'): { tile: HTMLElement; key: string; media: HTMLImageElement | HTMLVideoElement } | null {
+  for (const tile of getLabsFxVisibleResourceTiles()) {
+    const media = mediaKind === 'video'
+      ? tile.querySelector('video')
+      : tile.querySelector('img[alt="生成的图片"]');
+    if (!media) continue;
+    const key = tile.getAttribute('data-tile-id') || media.getAttribute('src') || '';
+    if (!key || previousKeys.has(key)) continue;
+    return { tile, key, media: media as HTMLImageElement | HTMLVideoElement };
+  }
+  return null;
+}
+
 function getLabsFxVisibleResourceTiles(): HTMLElement[] {
   const seen = new Set<string>();
   const tiles: HTMLElement[] = [];
   for (const tile of Array.from(document.querySelectorAll<HTMLElement>('[data-tile-id]'))) {
     if (!isVisibleElement(tile)) continue;
-    if (!tile.querySelector('img[alt="生成的图片"]')) continue;
-    const key = tile.getAttribute('data-tile-id') || tile.querySelector('img[alt="生成的图片"]')?.getAttribute('src') || '';
+    const media = tile.querySelector('img[alt="生成的图片"], video');
+    if (!media) continue;
+    const key = tile.getAttribute('data-tile-id') || media.getAttribute('src') || '';
     if (!key || seen.has(key)) continue;
     seen.add(key);
     tiles.push(tile);
@@ -1612,6 +1678,84 @@ async function waitForNewLabsFxImage(previousKeysInput: string[] | Set<string>, 
   }
   debugLog('labsfx 等待新图片超时', { previousKeys: Array.from(previousKeys), timeoutMs, currentKeys: getLabsFxTileKeys() });
   throw new Error('wait for generated image timed out');
+}
+
+function isLabsFxMediaReady(mediaKind: 'image' | 'video', media: HTMLImageElement | HTMLVideoElement): boolean {
+  if (mediaKind === 'video') {
+    const video = media as HTMLVideoElement;
+    return !!video.getAttribute('src') && video.readyState >= 2;
+  }
+  const image = media as HTMLImageElement;
+  return image.complete && image.naturalWidth > 0;
+}
+
+async function waitForNewLabsFxGeneratedMedia(
+  mediaKind: 'image' | 'video',
+  previousKeysInput: string[] | Set<string>,
+  timeoutMs: number
+): Promise<HTMLImageElement | HTMLVideoElement> {
+  const deadline = Date.now() + timeoutMs;
+  const previousKeys = previousKeysInput instanceof Set ? previousKeysInput : new Set(previousKeysInput);
+  debugLog(`labsfx 等待新${mediaKind === 'video' ? '视频' : '图片'}`, { previousKeys: Array.from(previousKeys), timeoutMs });
+  let lastSeenKeys = '';
+  while (Date.now() < deadline) {
+    const currentKeys = getLabsFxTileKeys();
+    const currentKeySummary = currentKeys.join(',');
+    if (currentKeySummary !== lastSeenKeys) {
+      lastSeenKeys = currentKeySummary;
+      debugLog('labsfx 当前资源列表 key', currentKeys);
+    }
+    const found = getLabsFxNewMediaTile(previousKeys, mediaKind);
+    if (found && isLabsFxMediaReady(mediaKind, found.media)) {
+      if (mediaKind === 'video') {
+        const video = found.media as HTMLVideoElement;
+        debugLog('labsfx 新视频已就绪', { key: found.key, width: video.videoWidth, height: video.videoHeight });
+      } else {
+        const image = found.media as HTMLImageElement;
+        debugLog('labsfx 新图片已就绪', { key: found.key, width: image.naturalWidth, height: image.naturalHeight });
+      }
+      return found.media;
+    }
+    await sleep(1000);
+  }
+  debugLog(`labsfx 等待新${mediaKind === 'video' ? '视频' : '图片'}超时`, { previousKeys: Array.from(previousKeys), timeoutMs, currentKeys: getLabsFxTileKeys() });
+  throw new Error(`wait for generated ${mediaKind} timed out`);
+}
+
+function getLabsFxModeButton(editor: HTMLElement): HTMLElement | null {
+  const region = (editor.closest('.sc-84e494b2-0') ?? defaultEditorRegion(editor)) as Element | null;
+  if (!region) return null;
+  return Array.from(region.querySelectorAll<HTMLElement>('button[aria-haspopup="menu"]')).find((btn) => {
+    const text = (btn.textContent || '').trim();
+    return text.includes('视频') || text.includes('Nano') || text.includes('Banana');
+  }) ?? null;
+}
+
+async function ensureLabsFxMode(editor: HTMLElement, mediaKind: 'image' | 'video') {
+  if (mediaKind !== 'video') return;
+  const modeBtn = getLabsFxModeButton(editor);
+  if (!modeBtn) return;
+  const currentText = (modeBtn.textContent || '').trim();
+  if (currentText.includes('视频')) {
+    debugLog('labsfx 当前已处于视频模式');
+    return;
+  }
+  debugLog('labsfx 尝试切换到视频模式', { currentText: currentText.slice(0, 80) });
+  await clickElementLikeUser(modeBtn);
+  await sleep(300);
+
+  const candidates = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"], [role="option"], button, div')).filter((el) => {
+    if (!isVisibleElement(el)) return false;
+    const text = (el.textContent || '').trim();
+    return text === '视频' || text.startsWith('视频');
+  });
+  if (candidates[0]) {
+    await clickElementLikeUser(candidates[0]);
+    await sleep(400);
+    debugLog('labsfx 已切换到视频模式');
+    return;
+  }
+  debugLog('labsfx 未找到视频模式菜单项，继续使用当前模式');
 }
 
 async function waitForElement<T extends Element>(selector: string, timeoutMs: number): Promise<T> {
@@ -1646,6 +1790,16 @@ function guessImageExtension(mimeType: string, src: string): string {
   if (lowerMime.includes('webp')) return '.webp';
   const match = src.match(/\.(png|jpe?g|webp|gif)(?:$|\?)/i);
   return match ? `.${match[1].toLowerCase() === 'jpeg' ? 'jpg' : match[1].toLowerCase()}` : '.png';
+}
+
+function guessMediaExtension(mimeType: string, src: string): string {
+  const lowerMime = mimeType.toLowerCase();
+  if (lowerMime.includes('video/mp4')) return '.mp4';
+  if (lowerMime.includes('video/webm')) return '.webm';
+  if (lowerMime.includes('video/quicktime')) return '.mov';
+  const videoMatch = src.match(/\.(mp4|webm|mov|m4v)(?:$|\?)/i);
+  if (videoMatch) return `.${videoMatch[1].toLowerCase()}`;
+  return guessImageExtension(mimeType, src);
 }
 
 async function sendInitPrompt() {

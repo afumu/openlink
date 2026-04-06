@@ -14,6 +14,7 @@ import (
 
 type imageJob struct {
 	ID              string
+	MediaKind       string
 	Prompt          string
 	Model           string
 	Size            string
@@ -29,6 +30,7 @@ type imageJobReference struct {
 }
 
 type imageJobResult struct {
+	MediaKind     string
 	MimeType      string
 	OriginalName  string
 	StoredRelPath string
@@ -54,10 +56,14 @@ func newImageJobBridge(rootDir, token string) *imageJobBridge {
 	}
 }
 
-func (b *imageJobBridge) enqueueAndWait(ctx context.Context, prompt, model, size, responseFormat string, references []imageJobReference) (*imageJob, *imageJobResult, error) {
+func (b *imageJobBridge) enqueueAndWait(ctx context.Context, mediaKind, prompt, model, size, responseFormat string, references []imageJobReference) (*imageJob, *imageJobResult, error) {
 	id := fmt.Sprintf("img_%d_%d", time.Now().Unix(), b.idCounter.Add(1))
+	if strings.TrimSpace(mediaKind) == "" {
+		mediaKind = "image"
+	}
 	job := &imageJob{
 		ID:              id,
+		MediaKind:       mediaKind,
 		Prompt:          prompt,
 		Model:           model,
 		Size:            size,
@@ -139,11 +145,12 @@ func (b *imageJobBridge) complete(jobID, originalName, mimeType string, data []b
 		return nil, errors.New("image job not found")
 	}
 
-	storedRelPath, err := b.storeImage(jobID, originalName, mimeType, data)
+	storedRelPath, err := b.storeMedia(jobID, originalName, mimeType, data)
 	if err != nil {
 		return nil, err
 	}
 	result := &imageJobResult{
+		MediaKind:     job.MediaKind,
 		MimeType:      mimeType,
 		OriginalName:  originalName,
 		StoredRelPath: storedRelPath,
@@ -166,13 +173,13 @@ func (b *imageJobBridge) fail(jobID string) {
 	}
 }
 
-func (b *imageJobBridge) storeImage(jobID, originalName, mimeType string, data []byte) (string, error) {
+func (b *imageJobBridge) storeMedia(jobID, originalName, mimeType string, data []byte) (string, error) {
 	ext := filepath.Ext(originalName)
 	if ext == "" {
 		ext = mimeExtension(mimeType)
 	}
 	if ext == "" {
-		ext = ".png"
+		ext = ".bin"
 	}
 	fileName := sanitizeFileName(jobID) + ext
 	relPath := filepath.Join(".openlink", "generated", fileName)
@@ -196,6 +203,12 @@ func mimeExtension(mimeType string) string {
 		return ".webp"
 	case "image/gif":
 		return ".gif"
+	case "video/mp4":
+		return ".mp4"
+	case "video/webm":
+		return ".webm"
+	case "video/quicktime":
+		return ".mov"
 	default:
 		return ""
 	}

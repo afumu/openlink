@@ -292,7 +292,7 @@ func (s *Server) handleOpenAIImageGeneration(c *gin.Context) {
 		return
 	}
 
-	job, result, err := s.imageJobBridge.enqueueAndWait(ctx, req.Prompt, model, req.Size, req.ResponseFormat, referenceImages)
+	job, result, err := s.imageJobBridge.enqueueAndWait(ctx, "image", req.Prompt, model, req.Size, req.ResponseFormat, referenceImages)
 	if err != nil {
 		c.JSON(http.StatusGatewayTimeout, gin.H{"error": "image generation timed out", "details": err.Error()})
 		return
@@ -322,6 +322,22 @@ func (s *Server) openAITimeout() time.Duration {
 	return cfgTimeout
 }
 
+func (s *Server) openAIVideoTimeout() time.Duration {
+	const minOpenAIVideoTimeout = 25 * time.Minute
+	cfgTimeout := time.Duration(s.config.Timeout) * time.Second
+	if cfgTimeout < minOpenAIVideoTimeout {
+		return minOpenAIVideoTimeout
+	}
+	return cfgTimeout
+}
+
+func (s *Server) openAITimeoutForKind(mediaKind string) time.Duration {
+	if strings.EqualFold(strings.TrimSpace(mediaKind), "video") {
+		return s.openAIVideoTimeout()
+	}
+	return s.openAITimeout()
+}
+
 func (s *Server) handleImageJobNext(c *gin.Context) {
 	job := s.imageJobBridge.nextJob()
 	if job == nil {
@@ -331,6 +347,7 @@ func (s *Server) handleImageJobNext(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"job": gin.H{
 			"id":              job.ID,
+			"media_kind":      job.MediaKind,
 			"prompt":          job.Prompt,
 			"model":           job.Model,
 			"size":            job.Size,
@@ -381,6 +398,7 @@ func (s *Server) handleImageJobResult(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"ok":   true,
 		"path": result.StoredRelPath,
+		"media_kind": result.MediaKind,
 	})
 }
 

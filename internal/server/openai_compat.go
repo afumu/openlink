@@ -22,9 +22,12 @@ type openAIModelInfo struct {
 var openAIModelCatalog = []openAIModelInfo{
 	{ID: "labs-google-fx", Object: "model", OwnedBy: "openlink", Description: "Google Labs Flow image generation via browser automation"},
 	{ID: "labs-google-fx-image", Object: "model", OwnedBy: "openlink", Description: "Alias of labs-google-fx for image generation"},
+	{ID: "labs-google-fx-video", Object: "model", OwnedBy: "openlink", Description: "Google Labs Flow video generation via browser automation"},
+	{ID: "labs-google-fx-veo", Object: "model", OwnedBy: "openlink", Description: "Alias of labs-google-fx-video for video generation"},
 }
 
 var markdownImageURLRe = regexp.MustCompile(`!\[[^\]]*\]\(([^)\s]+)`)
+var htmlVideoURLRe = regexp.MustCompile(`(?i)<video[^>]+src=['"]([^'"]+)`)
 
 type chatCompletionRequest struct {
 	Model           string                  `json:"model"`
@@ -60,7 +63,8 @@ func (s *Server) handleOpenAIChatCompletions(c *gin.Context) {
 	}
 
 	model := normalizeOpenAIModel(req.Model)
-	ctx, cancel := context.WithTimeout(c.Request.Context(), s.openAITimeout())
+	mediaKind := openAIModelKind(model)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), s.openAITimeoutForKind(mediaKind))
 	defer cancel()
 
 	referenceInputs = normalizeReferenceImageInputs(referenceInputs, req.Image, req.Images, req.ReferenceImages)
@@ -70,14 +74,14 @@ func (s *Server) handleOpenAIChatCompletions(c *gin.Context) {
 		return
 	}
 
-	job, result, err := s.imageJobBridge.enqueueAndWait(ctx, prompt, model, "", "url", referenceImages)
+	job, result, err := s.imageJobBridge.enqueueAndWait(ctx, mediaKind, prompt, model, "", "url", referenceImages)
 	if err != nil {
-		c.JSON(http.StatusGatewayTimeout, gin.H{"error": "image generation timed out", "details": err.Error()})
+		c.JSON(http.StatusGatewayTimeout, gin.H{"error": fmt.Sprintf("%s generation timed out", mediaKind), "details": err.Error()})
 		return
 	}
 
-	imageURL := buildGeneratedAssetURL(c, result.StoredRelPath, s.config.Token)
-	content := fmt.Sprintf("![Generated Image](%s)", imageURL)
+	mediaURL := buildGeneratedAssetURL(c, result.StoredRelPath, s.config.Token)
+	content := buildOpenAIMediaContent(mediaKind, mediaURL)
 	created := time.Now().Unix()
 	completionID := fmt.Sprintf("chatcmpl-%d", created)
 
@@ -140,6 +144,7 @@ func (s *Server) handleOpenAIChatCompletions(c *gin.Context) {
 			"total_tokens":      0,
 		},
 		"revised_prompt": job.Prompt,
+		"url":            mediaURL,
 	})
 }
 
@@ -274,6 +279,17 @@ func appendHistoricalAssistantReferenceImages(references []referenceImageInput, 
 		}
 		matches := markdownImageURLRe.FindAllStringSubmatch(content, -1)
 		if len(matches) == 0 {
+			videoMatches := htmlVideoURLRe.FindAllStringSubmatch(content, -1)
+			if len(videoMatches) == 0 {
+				continue
+			}
+			for j := len(videoMatches) - 1; j >= 0; j-- {
+				videoURL := strings.TrimSpace(videoMatches[j][1])
+				if videoURL == "" {
+					continue
+				}
+				return append([]referenceImageInput{referenceImageInputFromString(videoURL)}, references...)
+			}
 			continue
 		}
 		for j := len(matches) - 1; j >= 0; j-- {
@@ -292,9 +308,26 @@ func normalizeOpenAIModel(model string) string {
 	switch model {
 	case "", "labs-google-fx-image":
 		return "labs-google-fx"
+	case "labs-google-fx-veo":
+		return "labs-google-fx-video"
 	default:
 		return model
 	}
+}
+
+func openAIModelKind(model string) string {
+	normalized := strings.ToLower(strings.TrimSpace(model))
+	if strings.Contains(normalized, "video") || strings.Contains(normalized, "veo") || strings.Contains(normalized, "_t2v_") || strings.Contains(normalized, "_i2v_") || strings.Contains(normalized, "_r2v_") {
+		return "video"
+	}
+	return "image"
+}
+
+func buildOpenAIMediaContent(mediaKind, mediaURL string) string {
+	if mediaKind == "video" {
+		return fmt.Sprintf(`<video src="%s" controls playsinline></video>`, mediaURL)
+	}
+	return fmt.Sprintf("![Generated Image](%s)", mediaURL)
 }
 
 func writeSSEJSON(c *gin.Context, payload interface{}) {
