@@ -1,0 +1,21 @@
+[23:00:47 #1] 内容脚本已加载 {"adapter":"gemini","href":"https://gemini.google.com/u/0/app/137b41a188da5c69"}
+[23:00:47 #2] 调试模式状态初始化 {"enabled":false}
+[23:00:47 #3] gemini 图片 worker 已启动
+[23:01:30 #4] gemini 收到媒体任务 {"id":"img_1775487688_7","mediaKind":"image","prompt":"画一个梁山108将的图，每个人物的特点都要画出来"}
+[23:01:30 #5] gemini 开始执行图片任务 {"id":"img_1775487688_7"}
+[23:01:30 #6] gemini 已定位输入框
+[23:01:30 #7] gemini 提交前图片 key 集合 ["https://lh3.googleusercontent.com/gg/AMW1TPokCwLfa1A8sNMTVTXcydNF4sE0S9XT3tfPMjEIxdE1Tcv2Ao1WebNEoUj0FgWrnFhzDka2LkcxXYus3l2wJ-_xw8TU03eQaUJe93oj1o_rLiROhJ-gIkbFfIcs6OcB-deaWMWhAUraFqHXRj_7EgxCC8NcsiQTyt-W_8N29l3e2Ol5vhypZLsy-56UAA2lj3BszlUaUpgDfHwBzJrnDXl1Wlxku7soSIFAV57s_Yxdk75SPxtRqgTGV0mmH0E3Xc2S2zOMV8mS-lxYMQdShJtAKsnM4Ve0GFiqU_xIhJU3K-uTfp64tdOmD0k1CwSUH-3UU5bjxny7UotpUFinIbmB=s1024-rj"]
+[23:01:30 #8] gemini Prompt 已写入 {"prompt":"画一个梁山108将的图，每个人物的特点都要画出来","editorText":"画一个梁山108将的图，每个人物的特点都要画出来"}
+[23:01:30 #9] gemini 已定位发送按钮 {"text":""}
+[23:01:30 #10] gemini 已触发发送按钮点击
+[23:01:30 #11] gemini 等待无水印原图 URL {"previousSeq":0,"timeoutMs":30000}
+[23:02:00 #12] gemini 未捕获无水印原图 URL，回退页面 blob 图片
+[23:02:00 #13] gemini 等待新图片 {"previousKeys":["https://lh3.googleusercontent.com/gg/AMW1TPokCwLfa1A8sNMTVTXcydNF4sE0S9XT3tfPMjEIxdE1Tcv2Ao1WebNEoUj0FgWrnFhzDka2LkcxXYus3l2wJ-_xw8TU03eQaUJe93oj1o_rLiROhJ-gIkbFfIcs6OcB-deaWMWhAUraFqHXRj_7EgxCC8NcsiQTyt-W_8N29l3e2Ol5vhypZLsy-56UAA2lj3BszlUaUpgDfHwBzJrnDXl1Wlxku7soSIFAV57s_Yxdk75SPxtRqgTGV0mmH0E3Xc2S2zOMV8mS-lxYMQdShJtAKsnM4Ve0GFiqU_xIhJU3K-uTfp64tdOmD0k1CwSUH-3UU5bjxny7UotpUFinIbmB=s1024-rj"],"timeoutMs":180000}
+[23:02:00 #14] gemini 当前图片 key ["https://lh3.googleusercontent.com/gg/AMW1TPokCwLfa1A8sNMTVTXcydNF4sE0S9XT3tfPMjEIxdE1Tcv2Ao1WebNEoUj0FgWrnFhzDka2LkcxXYus3l2wJ-_xw8TU03eQaUJe93oj1o_rLiROhJ-gIkbFfIcs6OcB-deaWMWhAUraFqHXRj_7EgxCC8NcsiQTyt-W_8N29l3e2Ol5vhypZLsy-56UAA2lj3BszlUaUpgDfHwBzJrnDXl1Wlxku7soSIFAV57s_Yxdk75SPxtRqgTGV0mmH0E3Xc2S2zOMV8mS-lxYMQdShJtAKsnM4Ve0GFiqU_xIhJU3K-uTfp64tdOmD0k1CwSUH-3UU5bjxny7UotpUFinIbmB=s1024-rj"]
+[23:02:03 #15] gemini 当前图片 key []
+[23:02:05 #16] gemini 当前图片 key ["blob:https://gemini.google.com/f7da549c-ad56-45d8-b6d2-d7ca64f15e6c"]
+[23:02:05 #17] gemini 新图片已就绪 {"key":"blob:https://gemini.google.com/f7da549c-ad56-45d8-b6d2-d7ca64f15e6c","width":1024,"height":572}
+[23:02:05 #18] gemini 检测到新图片 {"src":"blob:https://gemini.google.com/f7da549c-ad56-45d8-b6d2-d7ca64f15e6c"}
+[23:02:05 #19] gemini 图片结果回传成功 {"fileName":"img_1775487688_7.jpg","status":200}
+[23:02:17 #20] 调试模式状态变更 {"enabled":true}
+[23:02:17 #21] 调试面板已挂载

@@ -1,0 +1,60 @@
+[23:33:24 #59] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=ESY5D&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-web","length":167,"hasWrb":true,"hasGgdl":false}
+[23:33:24 #60] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=ESY5D&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-web"}
+[23:33:27 #61] gemini 收到媒体任务 {"id":"img_1775489606_12","mediaKind":"image","prompt":"画一个三国时期蜀国名将的图，每个人物的特点都要画出来"}
+[23:33:27 #62] gemini 开始执行图片任务 {"id":"img_1775489606_12"}
+[23:33:27 #63] gemini 已定位输入框
+[23:33:27 #64] gemini 提交前图片 key 集合 ["https://lh3.googleusercontent.com/gg/AMW1TPqJQccEUWwv44b0XtZ_rQLkfMmKcls1LoAoA7aC8sWuv_9DWs0_T-IrIgRLRh-R-nX0pvhP2t2aZzPiusNfQScGKB2zcvTJiq59vjFl5AQropD0C064lMUJdR5HaDdf80YWCvJLLAg5KNwvFq2Izq14WXWebJsrML6NvXkMSj51tpD8wTBrQt_78uP97LVc5XUsrW9o3jZvS8bYQ9uklyV2UqhhqTvcvFWMB6GfQ4gCTpvRjNA_y6PlWDerR3LZ77GZQH9hjA8E_8b_ArC3phkE0mMu4GOj1xYsyJY9ib0OT9FH8wKpn0FQbue8xXbCJu7trX950SzYN4szDd1IsN39=s1024-rj"]
+[23:33:27 #65] gemini Prompt 已写入 {"prompt":"画一个三国时期蜀国名将的图，每个人物的特点都要画出来","editorText":"画一个三国时期蜀国名将的图，每个人物的特点都要画出来"}
+[23:33:27 #66] gemini 已定位发送按钮 {"text":""}
+[23:33:27 #67] gemini 已触发发送按钮点击
+[23:33:27 #68] gemini 等待无水印原图 URL {"previousSeq":0,"timeoutMs":30000}
+[23:33:28 #69] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=PCck7e&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":144,"hasWrb":true,"hasGgdl":false}
+[23:33:28 #70] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=PCck7e&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:33:31 #71] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=aPya6c&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":154,"hasWrb":true,"hasGgdl":false}
+[23:33:31 #72] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=aPya6c&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:33:43 #73] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=aPya6c&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":154,"hasWrb":true,"hasGgdl":false}
+[23:33:43 #74] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=aPya6c&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:33:57 #75] gemini 未捕获无水印原图 URL，回退页面 blob 图片
+[23:33:57 #76] gemini 等待新图片 {"previousKeys":["https://lh3.googleusercontent.com/gg/AMW1TPqJQccEUWwv44b0XtZ_rQLkfMmKcls1LoAoA7aC8sWuv_9DWs0_T-IrIgRLRh-R-nX0pvhP2t2aZzPiusNfQScGKB2zcvTJiq59vjFl5AQropD0C064lMUJdR5HaDdf80YWCvJLLAg5KNwvFq2Izq14WXWebJsrML6NvXkMSj51tpD8wTBrQt_78uP97LVc5XUsrW9o3jZvS8bYQ9uklyV2UqhhqTvcvFWMB6GfQ4gCTpvRjNA_y6PlWDerR3LZ77GZQH9hjA8E_8b_ArC3phkE0mMu4GOj1xYsyJY9ib0OT9FH8wKpn0FQbue8xXbCJu7trX950SzYN4szDd1IsN39=s1024-rj"],"timeoutMs":180000}
+[23:33:57 #77] gemini 当前图片 key ["https://lh3.googleusercontent.com/gg/AMW1TPqJQccEUWwv44b0XtZ_rQLkfMmKcls1LoAoA7aC8sWuv_9DWs0_T-IrIgRLRh-R-nX0pvhP2t2aZzPiusNfQScGKB2zcvTJiq59vjFl5AQropD0C064lMUJdR5HaDdf80YWCvJLLAg5KNwvFq2Izq14WXWebJsrML6NvXkMSj51tpD8wTBrQt_78uP97LVc5XUsrW9o3jZvS8bYQ9uklyV2UqhhqTvcvFWMB6GfQ4gCTpvRjNA_y6PlWDerR3LZ77GZQH9hjA8E_8b_ArC3phkE0mMu4GOj1xYsyJY9ib0OT9FH8wKpn0FQbue8xXbCJu7trX950SzYN4szDd1IsN39=s1024-rj"]
+[23:33:59 #78] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=aPya6c&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":154,"hasWrb":true,"hasGgdl":false}
+[23:33:59 #79] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=aPya6c&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:34:02 #80] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=aPya6c&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":154,"hasWrb":true,"hasGgdl":false}
+[23:34:02 #81] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=aPya6c&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:34:03 #82] [injected] gemini 响应检测命中 {"url":"https://lh3.googleusercontent.com/gg-dl/AOI_d__Ad_Pt3-u4WRBqylHFLIMXKY_jVJcUB7ITBfNfbwevBcEzxoUfTPxPs9Y0nX6-rKoGDvxvDjHR","length":454,"hasWrb":false,"hasGgdl":true}
+[23:34:03 #83] [injected] gemini 响应中未提取到无水印 URL {"url":"https://lh3.googleusercontent.com/gg-dl/AOI_d__Ad_Pt3-u4WRBqylHFLIMXKY_jVJcUB7ITBfNfbwevBcEzxoUfTPxPs9Y0nX6-rKoGDvxvDjHR"}
+[23:34:03 #84] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=ESY5D&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-web","length":165,"hasWrb":true,"hasGgdl":false}
+[23:34:03 #85] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=ESY5D&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-web"}
+[23:34:03 #86] [injected] gemini 响应检测命中 {"url":"https://lh3.googleusercontent.com/gg-dl/AOI_d__Ad_Pt3-u4WRBqylHFLIMXKY_jVJcUB7ITBfNfbwevBcEzxoUfTPxPs9Y0nX6-rKoGDvxvDjHR","length":454,"hasWrb":false,"hasGgdl":true}
+[23:34:03 #87] [injected] gemini 响应中未提取到无水印 URL {"url":"https://lh3.googleusercontent.com/gg-dl/AOI_d__Ad_Pt3-u4WRBqylHFLIMXKY_jVJcUB7ITBfNfbwevBcEzxoUfTPxPs9Y0nX6-rKoGDvxvDjHR"}
+[23:34:03 #88] gemini 当前图片 key []
+[23:34:03 #89] [injected] gemini 响应检测命中 {"url":"https://lh3.googleusercontent.com/gg-dl/AOI_d__Ad_Pt3-u4WRBqylHFLIMXKY_jVJcUB7ITBfNfbwevBcEzxoUfTPxPs9Y0nX6-rKoGDvxvDjHR","length":454,"hasWrb":false,"hasGgdl":true}
+[23:34:03 #90] [injected] gemini 响应中未提取到无水印 URL {"url":"https://lh3.googleusercontent.com/gg-dl/AOI_d__Ad_Pt3-u4WRBqylHFLIMXKY_jVJcUB7ITBfNfbwevBcEzxoUfTPxPs9Y0nX6-rKoGDvxvDjHR"}
+[23:34:04 #91] [injected] gemini 响应检测命中 {"url":"https://work.fife.usercontent.google.com/rd-gg-dl/AOI_d_-IUPDeAaYSrKRvbJbjq7_J8Dnf89jMkwHCrTWN35nawJJ3glr9lvrSTtHZL20h1q","length":1299,"hasWrb":false,"hasGgdl":true}
+[23:34:04 #92] [injected] gemini 响应中未提取到无水印 URL {"url":"https://work.fife.usercontent.google.com/rd-gg-dl/AOI_d_-IUPDeAaYSrKRvbJbjq7_J8Dnf89jMkwHCrTWN35nawJJ3glr9lvrSTtHZL20h1q"}
+[23:34:04 #93] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=aPya6c&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":153,"hasWrb":true,"hasGgdl":false}
+[23:34:04 #94] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=aPya6c&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:34:04 #95] [injected] gemini 响应检测命中 {"url":"https://lh3.googleusercontent.com/gg-dl/AOI_d__Ad_Pt3-u4WRBqylHFLIMXKY_jVJcUB7ITBfNfbwevBcEzxoUfTPxPs9Y0nX6-rKoGDvxvDjHR","length":454,"hasWrb":false,"hasGgdl":true}
+[23:34:04 #96] [injected] gemini 响应中未提取到无水印 URL {"url":"https://lh3.googleusercontent.com/gg-dl/AOI_d__Ad_Pt3-u4WRBqylHFLIMXKY_jVJcUB7ITBfNfbwevBcEzxoUfTPxPs9Y0nX6-rKoGDvxvDjHR"}
+[23:34:05 #97] [injected] gemini 响应检测命中 {"url":"https://lh3.googleusercontent.com/gg-dl/AOI_d__Ad_Pt3-u4WRBqylHFLIMXKY_jVJcUB7ITBfNfbwevBcEzxoUfTPxPs9Y0nX6-rKoGDvxvDjHR","length":454,"hasWrb":false,"hasGgdl":true}
+[23:34:05 #98] [injected] gemini 响应中未提取到无水印 URL {"url":"https://lh3.googleusercontent.com/gg-dl/AOI_d__Ad_Pt3-u4WRBqylHFLIMXKY_jVJcUB7ITBfNfbwevBcEzxoUfTPxPs9Y0nX6-rKoGDvxvDjHR"}
+[23:34:05 #99] [injected] gemini 响应检测命中 {"url":"https://work.fife.usercontent.google.com/rd-gg-dl/AOI_d__Ax-8Y29984MOU_0erCG3Z51x-f3xKlyEyb3-LHKBi7ELhNeIn76DvEhnPdSw15m","length":1299,"hasWrb":false,"hasGgdl":true}
+[23:34:05 #100] [injected] gemini 响应中未提取到无水印 URL {"url":"https://work.fife.usercontent.google.com/rd-gg-dl/AOI_d__Ax-8Y29984MOU_0erCG3Z51x-f3xKlyEyb3-LHKBi7ELhNeIn76DvEhnPdSw15m"}
+[23:34:05 #101] [injected] gemini 响应检测命中 {"url":"https://lh3.googleusercontent.com/gg-dl/AOI_d__Ad_Pt3-u4WRBqylHFLIMXKY_jVJcUB7ITBfNfbwevBcEzxoUfTPxPs9Y0nX6-rKoGDvxvDjHR","length":454,"hasWrb":false,"hasGgdl":true}
+[23:34:05 #102] [injected] gemini 响应中未提取到无水印 URL {"url":"https://lh3.googleusercontent.com/gg-dl/AOI_d__Ad_Pt3-u4WRBqylHFLIMXKY_jVJcUB7ITBfNfbwevBcEzxoUfTPxPs9Y0nX6-rKoGDvxvDjHR"}
+[23:34:05 #103] [injected] gemini 响应检测命中 {"url":"https://work.fife.usercontent.google.com/rd-gg-dl/AOI_d_85x2CZ2EclhjeESZVauFYfUqiTnXpPtcovzdjsgJwZjs-JyBJKPglT3UfbQyS_PY","length":1299,"hasWrb":false,"hasGgdl":true}
+[23:34:05 #104] [injected] gemini 响应中未提取到无水印 URL {"url":"https://work.fife.usercontent.google.com/rd-gg-dl/AOI_d_85x2CZ2EclhjeESZVauFYfUqiTnXpPtcovzdjsgJwZjs-JyBJKPglT3UfbQyS_PY"}
+[23:34:05 #105] [injected] gemini 响应检测命中 {"url":"https://work.fife.usercontent.google.com/rd-gg-dl/AOI_d_9iXEp4DZwgXXyo7wcUSd3n6umqbPM5v12h4I-IMAiR5-Ruuo4kXbhnqPXyTWas3T","length":1300,"hasWrb":false,"hasGgdl":true}
+[23:34:05 #106] [injected] gemini 响应中未提取到无水印 URL {"url":"https://work.fife.usercontent.google.com/rd-gg-dl/AOI_d_9iXEp4DZwgXXyo7wcUSd3n6umqbPM5v12h4I-IMAiR5-Ruuo4kXbhnqPXyTWas3T"}
+[23:34:05 #107] gemini 当前图片 key ["blob:https://gemini.google.com/d38df3cf-2da6-460d-a05b-aefd711d58a1"]
+[23:34:05 #108] gemini 新图片已就绪 {"key":"blob:https://gemini.google.com/d38df3cf-2da6-460d-a05b-aefd711d58a1","width":1024,"height":572}
+[23:34:05 #109] gemini 检测到新图片 {"src":"blob:https://gemini.google.com/d38df3cf-2da6-460d-a05b-aefd711d58a1"}
+[23:34:05 #110] gemini 图片结果回传成功 {"fileName":"img_1775489606_12.jpg","status":200}
+[23:34:06 #111] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/assistant.lamda.BardFrontendService/StreamGenerate?bl=boq_assistant-bard-web-server_20260331.03_p","length":127878,"hasWrb":true,"hasGgdl":true}
+[23:34:06 #112] gemini 已捕获无水印媒体 URL {"seq":1,"count":1,"first":"https://lh3.googleusercontent.com/gg-dl/AOI_d_872O7UB6yEYB0K9DKzTkP-QwpajEKcjlf0MWE7FFAy_Xl-20tCcmwfY_0tPf4sQll9g__H5rUUDGbD15tMbERiZz2BGdrURbSK3Ds23U_Oqgq-fEK7x8GCYCR0JVEOMwQkRJ5Rmw0oHBVVi25CwWk-CXympGhnO_qxUmftYZ913rDMtQ=s0"}
+[23:34:07 #113] [injected] gemini 响应检测命中 {"url":"https://work.fife.usercontent.google.com/rd-gg-dl/AOI_d__GT9Sygqk7J4T8Ij7ClO_uCNFQT115oPcAXSVb7PGiePKiqjFWlfvzL2yobAhYz5","length":1299,"hasWrb":false,"hasGgdl":true}
+[23:34:07 #114] [injected] gemini 响应中未提取到无水印 URL {"url":"https://work.fife.usercontent.google.com/rd-gg-dl/AOI_d__GT9Sygqk7J4T8Ij7ClO_uCNFQT115oPcAXSVb7PGiePKiqjFWlfvzL2yobAhYz5"}
+[23:34:08 #115] [injected] gemini 响应检测命中 {"url":"https://work.fife.usercontent.google.com/rd-gg-dl/AOI_d__a7z178rK42uOXwz7dfSO3DGhb3DoN10Xb0t1fQTP87BMkabcjSS9xJ3_OAWKrsf","length":1300,"hasWrb":false,"hasGgdl":true}
+[23:34:08 #116] [injected] gemini 响应中未提取到无水印 URL {"url":"https://work.fife.usercontent.google.com/rd-gg-dl/AOI_d__a7z178rK42uOXwz7dfSO3DGhb3DoN10Xb0t1fQTP87BMkabcjSS9xJ3_OAWKrsf"}
+[23:34:20 #117] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=ESY5D&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-web","length":166,"hasWrb":true,"hasGgdl":false}
+[23:34:20 #118] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=ESY5D&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-web"}

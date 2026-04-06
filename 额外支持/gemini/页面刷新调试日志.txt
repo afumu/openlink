@@ -1,0 +1,64 @@
+[23:50:50 #1] 内容脚本已加载 {"adapter":"gemini","href":"https://gemini.google.com/u/0/app/137b41a188da5c69"}
+[23:50:50 #2] 调试模式状态初始化 {"enabled":true}
+[23:50:50 #3] 调试面板已挂载
+[23:50:50 #4] gemini 图片 worker 已启动
+[23:50:50 #5] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=otAQ7b&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":4004,"hasWrb":true,"hasGgdl":false}
+[23:50:50 #6] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=otAQ7b&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:50:51 #7] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=MaZiqc&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":141,"hasWrb":true,"hasGgdl":false}
+[23:50:51 #8] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=MaZiqc&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:50:51 #9] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=ESY5D&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-web","length":167,"hasWrb":true,"hasGgdl":false}
+[23:50:51 #10] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=ESY5D&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-web"}
+[23:50:51 #11] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=aPya6c&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":152,"hasWrb":true,"hasGgdl":false}
+[23:50:51 #12] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=aPya6c&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:50:51 #13] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=MaZiqc&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":834,"hasWrb":true,"hasGgdl":false}
+[23:50:51 #14] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=MaZiqc&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:50:51 #15] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=cYRIkd&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":2189,"hasWrb":true,"hasGgdl":false}
+[23:50:51 #16] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=cYRIkd&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:50:51 #17] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=sJBwce&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":1195,"hasWrb":true,"hasGgdl":false}
+[23:50:51 #18] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=sJBwce&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:50:51 #19] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=ESY5D&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-web","length":2223,"hasWrb":true,"hasGgdl":false}
+[23:50:51 #20] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=ESY5D&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-web"}
+[23:50:51 #21] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=GPRiHf&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":140,"hasWrb":true,"hasGgdl":false}
+[23:50:51 #22] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=GPRiHf&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:50:51 #23] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=ozz5Z&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-web","length":434,"hasWrb":true,"hasGgdl":false}
+[23:50:51 #24] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=ozz5Z&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-web"}
+[23:50:51 #25] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=qpEbW&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-web","length":190,"hasWrb":true,"hasGgdl":false}
+[23:50:51 #26] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=qpEbW&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-web"}
+[23:50:51 #27] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=o30O0e&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":1096,"hasWrb":true,"hasGgdl":false}
+[23:50:51 #28] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=o30O0e&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:50:52 #29] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=L5adhe&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":143,"hasWrb":true,"hasGgdl":false}
+[23:50:52 #30] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=L5adhe&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:50:52 #31] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=Te6DCf&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":142,"hasWrb":true,"hasGgdl":false}
+[23:50:52 #32] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=Te6DCf&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:50:52 #33] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=maGuAc&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":143,"hasWrb":true,"hasGgdl":false}
+[23:50:52 #34] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=maGuAc&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:50:52 #35] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=aPya6c&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":154,"hasWrb":true,"hasGgdl":false}
+[23:50:52 #36] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=aPya6c&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:50:52 #37] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=L5adhe&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":144,"hasWrb":true,"hasGgdl":false}
+[23:50:52 #38] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=L5adhe&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:50:52 #39] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=K4WWud&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":451,"hasWrb":true,"hasGgdl":false}
+[23:50:52 #40] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=K4WWud&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:50:52 #41] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=CNgdBe&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":141,"hasWrb":true,"hasGgdl":false}
+[23:50:52 #42] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=CNgdBe&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:50:53 #43] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=L5adhe&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":144,"hasWrb":true,"hasGgdl":false}
+[23:50:53 #44] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=L5adhe&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:50:53 #45] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=ozz5Z&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-web","length":433,"hasWrb":true,"hasGgdl":false}
+[23:50:53 #46] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=ozz5Z&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-web"}
+[23:50:53 #47] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=L5adhe&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":144,"hasWrb":true,"hasGgdl":false}
+[23:50:53 #48] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=L5adhe&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:50:53 #49] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=L5adhe&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":145,"hasWrb":true,"hasGgdl":false}
+[23:50:53 #50] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=L5adhe&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:50:54 #51] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=hNvQHb&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":1790196,"hasWrb":true,"hasGgdl":false}
+[23:50:54 #52] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=hNvQHb&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:50:54 #53] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=ku4Jyf&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":143,"hasWrb":true,"hasGgdl":false}
+[23:50:54 #54] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=ku4Jyf&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:50:54 #55] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=ku4Jyf&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":143,"hasWrb":true,"hasGgdl":false}
+[23:50:54 #56] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=ku4Jyf&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:50:54 #57] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=DYBcR&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-web","length":11412,"hasWrb":true,"hasGgdl":false}
+[23:50:54 #58] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=DYBcR&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-web"}
+[23:50:54 #59] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=ku4Jyf&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":144,"hasWrb":true,"hasGgdl":false}
+[23:50:54 #60] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=ku4Jyf&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:50:54 #61] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=aPya6c&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":153,"hasWrb":true,"hasGgdl":false}
+[23:50:54 #62] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=aPya6c&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}
+[23:51:00 #63] [injected] gemini 响应检测命中 {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=L5adhe&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we","length":145,"hasWrb":true,"hasGgdl":false}
+[23:51:00 #64] [injected] gemini 响应中未提取到无水印 URL {"url":"/u/0/_/BardChatUi/data/batchexecute?rpcids=L5adhe&source-path=%2Fu%2F0%2Fapp%2F137b41a188da5c69&bl=boq_assistant-bard-we"}

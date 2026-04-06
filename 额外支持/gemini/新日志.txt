@@ -1,0 +1,20 @@
+[23:07:47 #1] 内容脚本已加载 {"adapter":"gemini","href":"https://gemini.google.com/u/0/app/137b41a188da5c69"}
+[23:07:47 #2] 调试模式状态初始化 {"enabled":true}
+[23:07:47 #3] 调试面板已挂载
+[23:07:47 #4] gemini 图片 worker 已启动
+[23:08:09 #5] gemini 收到媒体任务 {"id":"img_1775488089_8","mediaKind":"image","prompt":"画一个西游记里面所有妖怪的图，每个人物的特点都要画出来"}
+[23:08:09 #6] gemini 开始执行图片任务 {"id":"img_1775488089_8"}
+[23:08:09 #7] gemini 已定位输入框
+[23:08:09 #8] gemini 提交前图片 key 集合 ["https://lh3.googleusercontent.com/gg/AMW1TPrYguN6Ld0DpnDEZ3Sj-kYrmwAHFAjDLEaeyMb5duJqklgVw25It1dmyf1dsHPW98gafJHdwKG707d2I8m2WuuxBzT4mSwKjD7-kWmUyOn1paCZCVB_skYKPgsXCMsHQv7W_cL57VxpS8inNoggNPl16n1CkjIpPcFPE7SvPCJtzAPMassy-KqFnxwPoeFLZn798XAwvxdMXm-J3QaNzEgSAB1JtknkcJ6ju8uTPWR0PILSIeTxYvqEkQaF9PVHPIJ-dwuy5V0AUL0vITBTO48ARkD6cz_fbkbIDiIalYe-1xi--PF5Z8TpDsdxwzW3Z8XJ4reO58M9Tv0WMrOFB4VX=s1024-rj"]
+[23:08:09 #9] gemini Prompt 已写入 {"prompt":"画一个西游记里面所有妖怪的图，每个人物的特点都要画出来","editorText":"画一个西游记里面所有妖怪的图，每个人物的特点都要画出来"}
+[23:08:09 #10] gemini 已定位发送按钮 {"text":""}
+[23:08:10 #11] gemini 已触发发送按钮点击
+[23:08:10 #12] gemini 等待无水印原图 URL {"previousSeq":0,"timeoutMs":30000}
+[23:08:40 #13] gemini 未捕获无水印原图 URL，回退页面 blob 图片
+[23:08:40 #14] gemini 等待新图片 {"previousKeys":["https://lh3.googleusercontent.com/gg/AMW1TPrYguN6Ld0DpnDEZ3Sj-kYrmwAHFAjDLEaeyMb5duJqklgVw25It1dmyf1dsHPW98gafJHdwKG707d2I8m2WuuxBzT4mSwKjD7-kWmUyOn1paCZCVB_skYKPgsXCMsHQv7W_cL57VxpS8inNoggNPl16n1CkjIpPcFPE7SvPCJtzAPMassy-KqFnxwPoeFLZn798XAwvxdMXm-J3QaNzEgSAB1JtknkcJ6ju8uTPWR0PILSIeTxYvqEkQaF9PVHPIJ-dwuy5V0AUL0vITBTO48ARkD6cz_fbkbIDiIalYe-1xi--PF5Z8TpDsdxwzW3Z8XJ4reO58M9Tv0WMrOFB4VX=s1024-rj"],"timeoutMs":180000}
+[23:08:40 #15] gemini 当前图片 key ["https://lh3.googleusercontent.com/gg/AMW1TPrYguN6Ld0DpnDEZ3Sj-kYrmwAHFAjDLEaeyMb5duJqklgVw25It1dmyf1dsHPW98gafJHdwKG707d2I8m2WuuxBzT4mSwKjD7-kWmUyOn1paCZCVB_skYKPgsXCMsHQv7W_cL57VxpS8inNoggNPl16n1CkjIpPcFPE7SvPCJtzAPMassy-KqFnxwPoeFLZn798XAwvxdMXm-J3QaNzEgSAB1JtknkcJ6ju8uTPWR0PILSIeTxYvqEkQaF9PVHPIJ-dwuy5V0AUL0vITBTO48ARkD6cz_fbkbIDiIalYe-1xi--PF5Z8TpDsdxwzW3Z8XJ4reO58M9Tv0WMrOFB4VX=s1024-rj"]
+[23:08:47 #16] gemini 当前图片 key []
+[23:08:49 #17] gemini 当前图片 key ["blob:https://gemini.google.com/d16060b3-ed98-4ab2-a893-00ee64a4c15c"]
+[23:08:49 #18] gemini 新图片已就绪 {"key":"blob:https://gemini.google.com/d16060b3-ed98-4ab2-a893-00ee64a4c15c","width":1024,"height":572}
+[23:08:49 #19] gemini 检测到新图片 {"src":"blob:https://gemini.google.com/d16060b3-ed98-4ab2-a893-00ee64a4c15c"}
+[23:08:49 #20] gemini 图片结果回传成功 {"fileName":"img_1775488089_8.jpg","status":200}
